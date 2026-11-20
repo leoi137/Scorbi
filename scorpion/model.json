@@ -1,0 +1,193 @@
+{
+  "source": "robot/cad (scorpion spider v0.4)",
+  "frame": "x forward, y left, z up; metres, radians",
+  "joints": [
+    {
+      "name": "fl_hip_turn",
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "lower": -1.0471975511965976,
+      "upper": 1.0471975511965976
+    },
+    {
+      "name": "fl_hip_lift",
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "lower": -0.2617993877991494,
+      "upper": 1.6580627893946132
+    },
+    {
+      "name": "fl_knee",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "lower": 1.3089969389957472,
+      "upper": 2.705260340591211
+    },
+    {
+      "name": "fr_hip_turn",
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "lower": -1.0471975511965976,
+      "upper": 1.0471975511965976
+    },
+    {
+      "name": "fr_hip_lift",
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "lower": -0.2617993877991494,
+      "upper": 1.6580627893946132
+    },
+    {
+      "name": "fr_knee",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "lower": 1.3089969389957472,
+      "upper": 2.705260340591211
+    },
+    {
+      "name": "rl_hip_turn",
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "lower": -1.0471975511965976,
+      "upper": 1.0471975511965976
+    },
+    {
+      "name": "rl_hip_lift",
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "lower": -0.2617993877991494,
+      "upper": 1.6580627893946132
+    },
+    {
+      "name": "rl_knee",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "lower": 1.3089969389957472,
+      "upper": 2.705260340591211
+    },
+    {
+      "name": "rr_hip_turn",
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "lower": -1.0471975511965976,
+      "upper": 1.0471975511965976
+    },
+    {
+      "name": "rr_hip_lift",
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "lower": -0.2617993877991494,
+      "upper": 1.6580627893946132
+    },
+    {
+      "name": "rr_knee",
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "lower": 1.3089969389957472,
+      "upper": 2.705260340591211
+    },
+    {
+      "name": "arm_shoulder",
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "lower": -0.08726646259971647,
+      "upper": 1.7453292519943295
+    },
+    {
+      "name": "arm_elbow",
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "lower": -1.9198621771937625,
+      "upper": 0.0
+    },
+    {
+      "name": "claw",
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "lower": -0.4363323129985824,
+      "upper": 0.9250245035569946
+    }
+  ],
+  "stand": {
+    "base_height": 0.0735,
+    "joints": {
+      "fl_hip_turn": 0.0,
+      "fl_hip_lift": 0.708394040740318,
+      "fl_knee": 2.375952027527887,
+      "fr_hip_turn": 0.0,
+      "fr_hip_lift": 0.708394040740318,
+      "fr_knee": 2.375952027527887,
+      "rl_hip_turn": 0.0,
+      "rl_hip_lift": 0.708394040740318,
+      "rl_knee": 2.375952027527887,
+      "rr_hip_turn": 0.0,
+      "rr_hip_lift": 0.708394040740318,
+      "rr_knee": 2.375952027527887,
+      "arm_shoulder": 1.25,
+      "arm_elbow": -1.8,
+      "claw": -0.3839724354387525
+    }
+  },
+  "motor": {
+    "effort": 1.18,
+    "velocity": 9.6,
+    "kp": 9.0,
+    "kv": 0.12,
+    "armature": 0.002,
+    "damping": 0.05,
+    "frictionloss": 0.02
+  },
+  "mass": 1.0499999999999998,
+  "feet": [
+    "fl_foot",
+    "fr_foot",
+    "rl_foot",
+    "rr_foot"
+  ],
+  "foot_radius": 0.0135
+}

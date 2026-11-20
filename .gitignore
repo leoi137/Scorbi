@@ -1,0 +1,12 @@
+# written by the CAD scripts in cad/ (print files, checks, viewer data)
+/out/
+
+# Feetech's motor model: download it yourself (see cad/vendor.py)
+*.stp
+*.step
+
+# Python
+__pycache__/
+.venv/
+
+.DS_Store
