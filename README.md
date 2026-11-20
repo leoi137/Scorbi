@@ -68,7 +68,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 ## Remake the pictures
 
-After a change to the model, remake the 3D model and the pictures. This needs [Blender](https://www.blender.org) and [ffmpeg](https://ffmpeg.org); the render takes about 15 minutes on a laptop GPU.
+After a change to the model, remake the 3D model and the pictures. This needs [Blender](https://www.blender.org) and [ffmpeg](https://ffmpeg.org); the render takes 20 to 50 minutes on a laptop GPU.
 
 ```
 .venv/bin/python media/assemble_stl.py
