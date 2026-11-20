@@ -1,5 +1,22 @@
 # Scorbi
 
+<p align="center">
+  <a href="https://www.myautonomylab.com">
+    <picture>
+      <source media="(prefers-reduced-motion: reduce)" srcset="media/scorbi.png">
+      <img src="media/scorbi-turntable.gif" width="720" alt="Scorbi, a small scorpion spider robot in cream, coral and mint with two big black eyes, turning on the spot and opening its claw">
+    </picture>
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://www.myautonomylab.com"><b>Drive it in your browser</b></a>
+  &nbsp;·&nbsp;
+  <a href="media/scorbi.stl"><b>Turn the 3D model</b></a>
+  &nbsp;·&nbsp;
+  <a href="build-pack/"><b>Build pack</b></a>
+</p>
+
 Scorbi is an open-source robot: a small scorpion spider with four legs, an arm and a claw, moved by 15 Feetech servos. Its hardware design, simulation model and build guide are all here, under open licenses.
 
 It is not built yet. Nothing has been printed, wired or switched on. You can try it in a physics simulation at [myautonomylab.com](https://www.myautonomylab.com).
@@ -24,14 +41,15 @@ Don't build v0.4 from the files here. Wait for the v0.5 CAD.
 | `scorpion/scorpion.urdf` | The same robot as URDF. |
 | `scorpion/model.json` | Joint ranges, the standing pose and the motor settings. |
 | `scorpion/meshes/` | One STL per part, in metres, in the part's own frame. |
+| `media/` | The pictures above and the whole robot as one STL, `scorbi.stl`, which GitHub shows in a 3D viewer. The scripts that make them are in the same folder; see [Remake the pictures](#remake-the-pictures). |
 
 ## Licenses
 
 | What | License |
 |---|---|
-| The hardware design: `cad/` and `scorpion/` | [CERN-OHL-S-2.0](LICENSES/CERN-OHL-S-2.0.txt) |
-| The software: `build_model.py` and `check_model.py` | [Apache-2.0](LICENSES/Apache-2.0.txt) |
-| The documentation: `build-pack/` and this README | [CC-BY-4.0](LICENSES/CC-BY-4.0.txt) |
+| The hardware design: `cad/`, `scorpion/` and `media/scorbi.stl` | [CERN-OHL-S-2.0](LICENSES/CERN-OHL-S-2.0.txt) |
+| The software: `build_model.py`, `check_model.py` and the scripts in `media/` | [Apache-2.0](LICENSES/Apache-2.0.txt) |
+| The documentation: `build-pack/`, the pictures in `media/` and this README | [CC-BY-4.0](LICENSES/CC-BY-4.0.txt) |
 
 If you make and share a changed version of the hardware, CERN-OHL-S asks you to share your changed design files under the same license.
 
@@ -47,6 +65,18 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 `build_model.py` overwrites everything in `scorpion/`. Don't edit those files by hand.
+
+## Remake the pictures
+
+After a change to the model, remake the 3D model and the pictures. This needs [Blender](https://www.blender.org) and [ffmpeg](https://ffmpeg.org); the render takes about 15 minutes on a laptop GPU.
+
+```
+.venv/bin/python media/assemble_stl.py
+.venv/bin/python media/pose_frames.py /tmp/scorbi/frames.npz
+blender --factory-startup --background --python media/render.py -- /tmp/scorbi/frames.npz /tmp/scorbi/anim 960 640 64
+blender --factory-startup --background --python media/render.py -- /tmp/scorbi/frames.npz /tmp/scorbi/hero 1800 1200 160 0 0
+sh media/make_gif.sh /tmp/scorbi
+```
 
 ## Frames and joints
 
