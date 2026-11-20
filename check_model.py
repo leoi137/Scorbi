@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check the generated model against the CAD, then check that it stands.
 
-    python robot/check_model.py
+    python check_model.py
 
 Fails (exit 1) when a foot or the claw is more than 1 mm from where the CAD puts it, when the mass is off,
 or when the robot does not stand on its motors.

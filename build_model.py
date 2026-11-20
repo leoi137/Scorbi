@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
-"""Build the simulation model of the scorpion spider from its CAD (robot/cad, v0.4).
+"""Build the simulation model of the scorpion spider from its CAD (cad/, v0.4).
 
-    pip install -r robot/requirements.txt
-    python robot/build_model.py
+    pip install -r requirements.txt
+    python build_model.py
 
 Writes
-  robot/scorpion/scorpion.xml   MJCF of the robot alone (MuJoCo, or Isaac Lab's MJCF importer)
-  robot/scorpion/scene.xml      the robot on a flat floor, to look at in MuJoCo's viewer
-  robot/scorpion/scorpion.urdf  the same robot as URDF (Isaac Lab's URDF importer)
-  robot/scorpion/model.json     joint ranges, the standing pose and the motor settings, in one place
-  robot/scorpion/meshes/        one STL per part, in metres, in the part's own frame
-  public/sim/robot/             the MJCF again with lighter meshes, for the website
+  scorpion/scorpion.xml   MJCF of the robot alone (MuJoCo, or Isaac Lab's MJCF importer)
+  scorpion/scene.xml      the robot on a flat floor, to look at in MuJoCo's viewer
+  scorpion/scorpion.urdf  the same robot as URDF (Isaac Lab's URDF importer)
+  scorpion/model.json     joint ranges, the standing pose and the motor settings, in one place
+  scorpion/meshes/        one STL per part, in metres, in the part's own frame
+  ../public/sim/robot/    the MJCF again with lighter meshes, for the website. Only when this
+                          repository sits at robot/ inside the website's repository.
 
 Frames: x forward, y left, z up. Metres and radians. The base frame sits on the body's centre line at the
 height of the hip turn motors. Joint names, their order, zero poses and positive directions follow
-src/sim/spec.ts. In particular the knee is 0 when the leg is straight, which is pi minus the CAD's
+the website's src/sim/spec.ts. In particular the knee is 0 when the leg is straight, which is pi minus the CAD's
 "angle between thigh and shin".
 """
 import json
@@ -38,6 +39,7 @@ from prim import Rz, T  # noqa: E402
 
 OUT = HERE / "scorpion"
 WEB = ROOT / "public" / "sim" / "robot"
+HAS_WEB = WEB.parent.is_dir()  # true only inside the website's repository, where this repository is robot/
 
 MM = 0.001
 W = Rz(-math.pi / 2)  # CAD frame (x right, y forward, z up) to model frame (x forward, y left, z up)
@@ -433,7 +435,8 @@ def urdf(bodies):
 def main():
     F, bodies, fine, light = build()
     names = sorted(fine)
-    for d, meshes in ((OUT, fine), (WEB, light)):
+    targets = [(OUT, fine), (WEB, light)] if HAS_WEB else [(OUT, fine)]
+    for d, meshes in targets:
         (d / "meshes").mkdir(parents=True, exist_ok=True)
         for old in (d / "meshes").glob("*.stl"):
             old.unlink()
@@ -453,7 +456,7 @@ def main():
         foot_radius=FOOT_R * MM,
     )
     (OUT / "model.json").write_text(json.dumps(info, indent=2) + "\n")
-    print("wrote", OUT.relative_to(ROOT), "and", WEB.relative_to(ROOT))
+    print("wrote", " and ".join(str(d.relative_to(ROOT)) for d, _ in targets))
 
 
 if __name__ == "__main__":
