@@ -1,10 +1,22 @@
-# Robot model
+# Cybi
 
-The scorpion spider v0.4 as a simulation model, generated from its CAD. The website runs this model in MuJoCo; train on the same model in Isaac Lab.
+Cybi is an open-source robot: a small scorpion spider with four legs, an arm and a claw, moved by 15 Feetech servos. Its hardware design, simulation model and build guide are all here, under open licenses.
+
+It is not built yet. Nothing has been printed, wired or switched on. You can try it in a physics simulation at [myautonomylab.com](https://www.myautonomylab.com).
+
+## Status
+
+- **CAD and simulation model: v0.4.** The CadQuery scripts in `cad/` and the model in `scorpion/` are v0.4.
+- **Build pack: v0.5.** Three reviews found 52 problems in v0.4, five of them dangerous. v0.5 fixes them, and `build-pack/` says how: the findings, how to print, wire, build and test it, and what only a real build can prove. The v0.5 CAD files and shopping list it mentions are not in this repository yet.
+
+Don't build v0.4 from the files here. Wait for the v0.5 CAD.
+
+## What's here
 
 | Path | What |
 |---|---|
-| `cad/` | The v0.4 CadQuery scripts, unchanged from the CAD pack. Every size is a named number in `cad/parts.py` and `cad/body.py`. Run on their own, they write print files and check results to `robot/out/`, which is not committed. |
+| `build-pack/` | The v0.5 build pack. Download the repository and open `build-pack/index.html` in a browser. |
+| `cad/` | The v0.4 CadQuery scripts. Every size is a named number in `cad/parts.py` and `cad/body.py`. Run on their own, they write print files and check results to `out/`, which is not committed. To use the motor maker's own 3D model, download Feetech's STEP file for the HD-1910-C001 and put it in `cad/` (see `cad/vendor.py`). |
 | `build_model.py` | Turns the CAD into the model files below. |
 | `check_model.py` | Loads the model in MuJoCo and checks it against the CAD: feet, mass, standing, a drop. |
 | `scorpion/scorpion.xml` | MJCF of the robot alone. |
@@ -12,26 +24,35 @@ The scorpion spider v0.4 as a simulation model, generated from its CAD. The webs
 | `scorpion/scorpion.urdf` | The same robot as URDF. |
 | `scorpion/model.json` | Joint ranges, the standing pose and the motor settings. |
 | `scorpion/meshes/` | One STL per part, in metres, in the part's own frame. |
-| `../public/sim/robot/` | The MJCF again with lighter meshes, for the website. `scripts/bake-sim.ts` turns it into what the page actually loads (see below). |
+
+## Licenses
+
+| What | License |
+|---|---|
+| The hardware design: `cad/` and `scorpion/` | [CERN-OHL-S-2.0](LICENSES/CERN-OHL-S-2.0.txt) |
+| The software: `build_model.py` and `check_model.py` | [Apache-2.0](LICENSES/Apache-2.0.txt) |
+| The documentation: `build-pack/` and this README | [CC-BY-4.0](LICENSES/CC-BY-4.0.txt) |
+
+If you make and share a changed version of the hardware, CERN-OHL-S asks you to share your changed design files under the same license.
+
+The name Cybi is not covered by these licenses.
 
 ## Rebuild after a CAD change
 
 ```
-python3 -m venv .venv && .venv/bin/pip install -r robot/requirements.txt
-.venv/bin/python robot/build_model.py      # about 50 s
-.venv/bin/python robot/check_model.py
-.venv/bin/python -m mujoco.viewer --mjcf robot/scorpion/scene.xml
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python build_model.py      # about 50 s
+.venv/bin/python check_model.py
+.venv/bin/python -m mujoco.viewer --mjcf scorpion/scene.xml
 ```
 
-`build_model.py` overwrites everything in `scorpion/` and `public/sim/robot/`. Don't edit those files by hand.
-
-The website doesn't load `public/sim/robot/` directly. `scripts/bake-sim.ts` precompiles the physics model to MuJoCo's `.mjb`, simplifies the meshes and works out their normals, and records the dance loop the page shows while the simulator loads. It writes `public/sim/robot.bin`, `sim.bin` and `mujoco.wasm`, which are not committed. `next.config.ts` runs it whenever Next starts a dev server or a build, however Next is started, and it returns at once when nothing it reads (this model, `src/sim/`, the MuJoCo and three.js versions) has changed. So after a CAD change, or a change to the controller or the physics setup, restarting `npm run dev` or building is enough. A bake whose checks fail stops the build; the dev server keeps the last good files and warns. `npm run bake -- --force` rebakes by hand. It needs Node 22.18 or later.
+`build_model.py` overwrites everything in `scorpion/`. Don't edit those files by hand.
 
 ## Frames and joints
 
 - **Frame:** x forward, y left, z up. Metres and radians.
 - **Base origin:** on the body's centre line, at the height of the hip turn motors. It sits 73.5 mm above the floor when standing.
-- **Joint order:** the names and order below are the contract in `src/sim/spec.ts`. MuJoCo uses this order. Isaac Lab orders joints its own way; see "Drop in a policy".
+- **Joint order:** the names and order below are fixed: the website's simulator depends on them. MuJoCo uses this order. Isaac Lab orders joints its own way, so map them by name.
 
 | Joints | Zero | Positive | Range |
 |---|---|---|---|
@@ -79,26 +100,3 @@ The physics runs at 500 Hz (`timestep` 0.002). Control runs at 50 Hz.
   - The website builds the standard velocity-task observations: `base_lin_vel`, `base_ang_vel`, `projected_gravity`, `velocity_commands`, `joint_pos_rel`, `joint_vel_rel` and `last_action`.
   - Leave out `height_scan`; the website can't build it yet.
   - Noise and corruption only apply in training, so they don't matter here.
-
-## Drop in a policy
-
-Isaac Lab's rsl_rl play script writes `logs/rsl_rl/<run>/exported/policy.onnx`.
-
-1. Copy that file to `public/sim/policy/policy.onnx`.
-2. In `public/sim/policy/policy.json`, set `"onnx": "policy.onnx"` and check the fields below against the run's `params/env.yaml`.
-3. Run the site. If the policy loads, it drives the legs whenever the robot is walking or standing. Sit, bow, dance and grab still take the legs while they play.
-
-If the policy can't be used, the console says why (`[policy] not used`) and the scripted gait keeps walking.
-
-| Field | What to put there |
-|---|---|
-| `action_joints` | The joints the action term drives, in Isaac Lab's order. Print `env.unwrapped.scene["robot"].joint_names` and keep the leg joints. Isaac Lab groups joints by depth, so the template lists all hip turns, then all hip lifts, then all knees. |
-| `observation_joints` | Joints in `joint_pos_rel` and `joint_vel_rel`, in order. If the observation covers every joint (the default), this list includes the arm joints in Isaac Lab's order. |
-| `default_joint_pos` | The `init_state` joint positions. |
-| `action_scale` | `actions.joint_pos.scale` (0.25 for Isaac Lab's velocity tasks). |
-| `clip_actions` | rsl_rl's `clip_actions`, if set. |
-| `observations` | The policy group's terms, in order. Give a term a scale with `{"name": "base_ang_vel", "scale": 0.25}` if the env scales it. |
-| `command_limits` | `commands.base_velocity.ranges`. |
-| `control_dt` | sim `dt` times `decimation`. It must be 0.02. |
-
-The website runs the policy with a small built-in ONNX reader, not onnxruntime. It handles what rsl_rl exports (linear layers, activations, the observation normalizer) and rejects anything else by name. An LSTM policy would need onnxruntime-web added.
