@@ -1,0 +1,2523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scorpion Spider v0.5 Build Pack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: a workshop manual. Sticky tab rail, one reading column, wide tables scroll inside their own box. */
+  --paper:#f3f4f1; --card:#ffffff; --ink:#1b2224; --muted:#566267; --line:#d3d8d4;
+  --accent:#c9472f; --accent-soft:#fbe9e4; --mint:#1d7f66; --mint-soft:#e2f3ed;
+  --bad:#b3261e; --bad-soft:#fbe7e5; --warn:#8a5a00; --warn-soft:#fbf0d9; --grey-soft:#e9ecea;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#111619; --card:#192024; --ink:#e5eae7; --muted:#9aa8a8; --line:#2b363a;
+    --accent:#ff8d73; --accent-soft:#3a211b; --mint:#63d1b0; --mint-soft:#15322b;
+    --bad:#ff8a80; --bad-soft:#3b1d1b; --warn:#f0bd5a; --warn-soft:#33290f; --grey-soft:#242d31;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111619; --card:#192024; --ink:#e5eae7; --muted:#9aa8a8; --line:#2b363a;
+  --accent:#ff8d73; --accent-soft:#3a211b; --mint:#63d1b0; --mint-soft:#15322b;
+  --bad:#ff8a80; --bad-soft:#3b1d1b; --warn:#f0bd5a; --warn-soft:#33290f; --grey-soft:#242d31;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55}
+a{color:var(--accent)} a:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px 0;display:flex;flex-direction:column;gap:8px}
+.brand{display:flex;align-items:center;gap:12px;max-width:1040px;width:100%;margin:0 auto}
+.mark{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 36% 34%,#fff 0 8%,transparent 9%),#1b2224;border:3px solid var(--accent);flex:none}
+.eyebrow{margin:0;font-family:var(--font-mono);font-size:12px;color:var(--muted);letter-spacing:.02em}
+h1{margin:0;font-family:var(--font-display);font-weight:700;font-size:30px;line-height:1.05;letter-spacing:.01em}
+.tabs{display:flex;gap:4px;overflow-x:auto;max-width:1040px;width:100%;margin:0 auto;scrollbar-width:thin}
+.tab{flex:none;padding:8px 12px;border-radius:6px 6px 0 0;color:var(--muted);text-decoration:none;font-weight:500;font-size:15px;border-bottom:3px solid transparent}
+.tab:hover{color:var(--ink)} .tab.on{color:var(--ink);border-bottom-color:var(--accent)}
+main{max-width:1040px;margin:0 auto;padding:22px 16px 40px}
+.view>*{max-width:76ch} .view>.scroll,.view>figure,.view>pre{max-width:100%}
+h2{font-family:var(--font-display);font-weight:700;font-size:32px;line-height:1.1;margin:8px 0 12px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:600;font-size:24px;line-height:1.15;margin:34px 0 8px;padding-top:14px;border-top:1px solid var(--line);text-wrap:balance}
+h4{font-size:16px;margin:20px 0 6px;font-weight:600}
+p,li{overflow-wrap:anywhere} ul,ol{padding-left:22px} li{margin:3px 0}
+strong{font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--grey-soft);padding:1px 5px;border-radius:4px}
+pre{background:var(--grey-soft);padding:12px 14px;border-radius:8px;overflow-x:auto;border:1px solid var(--line)} pre code{background:none;padding:0}
+.scroll{overflow-x:auto;margin:12px 0 18px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{font-weight:600;background:var(--grey-soft);position:sticky;top:0;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+figure{margin:14px 0 18px;background:#ffffff;border:1px solid var(--line);border-radius:10px;padding:8px;overflow-x:auto}
+figure img{display:block;max-width:100%;height:auto;margin:0 auto;border-radius:6px}
+figcaption{font-size:13px;color:#566267;padding:6px 4px 0}
+blockquote{margin:14px 0;padding:10px 14px;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}
+blockquote p{margin:4px 0}
+.pill{display:inline-block;font-family:var(--font-mono);font-size:11.5px;line-height:1.5;padding:1px 7px;border-radius:999px;border:1px solid var(--line);background:var(--grey-soft);color:var(--muted);white-space:nowrap;vertical-align:1px}
+.pill.l1{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)} .pill.l2{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.pill.l3{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)} .pill.ok{background:var(--mint-soft);color:var(--mint);border-color:var(--mint)}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)} .pill.guess{border-style:dashed}
+hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+.foot{max-width:1040px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:13.5px}
+@media (max-width:520px){h1{font-size:25px} h2{font-size:27px} h3{font-size:21px} body{font-size:15.5px}}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span><div><p class="eyebrow">Build pack, 18 November 2026</p><h1>Scorpion Spider v0.5</h1></div></div>
+  <nav class="tabs" aria-label="Sections"><a class="tab" id="tab-start" href="#start" data-view="start">Start here</a><a class="tab" id="tab-findings" href="#findings" data-view="findings">Findings</a><a class="tab" id="tab-print" href="#print" data-view="print">Print guide</a><a class="tab" id="tab-wiring" href="#wiring" data-view="wiring">Wiring</a><a class="tab" id="tab-build" href="#build" data-view="build">Build guide</a><a class="tab" id="tab-tests" href="#tests" data-view="tests">Test plan</a><a class="tab" id="tab-open" href="#open" data-view="open">Not proven yet</a></nav>
+</header>
+<main>
+<section class="view" id="view-start" data-view="start" aria-labelledby="tab-start">
+<h1>Start here</h1>
+<figure><img alt="Scorpion Spider v0.5" src="img/whole.png" loading="lazy"><figcaption>Scorpion Spider v0.5</figcaption></figure>
+<h2>The short answer</h2>
+<p><strong>Do not build v0.4.</strong> Three separate reviews found 52 problems in it. Five could hurt you or burn a wire. Sixteen more would have stopped the build. v0.5 fixes them.</p>
+<p><strong>v0.5 is ready to start, in stages.</strong> "Ready" means: every check a computer can do is done, and every check it cannot do is a numbered test with a pass or fail number. Nothing has been printed, wired or switched on yet. The first order is small on purpose: three motors and a test piece prove the risky facts for about $490 before you spend the rest.</p>
+<h2>What stayed the same</h2>
+<p>15 motors of the same type. The look: pillow body, cream, coral and mint, two 41 mm black eyes, no smile, no eye rings. Size: 275 x 308 x 252 mm standing. Leg and arm lengths. All 16 poses, checked again for collisions. One camera, microphone and speaker, wifi, 1 GB brain. Every part still fits a 180 x 180 mm printer.</p>
+<h2>What changed, and why</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ready-made battery pack, charged outside the robot</td>
+<td>The old battery meant soldering onto bare lithium cells</td>
+</tr>
+<tr>
+<td>Main fuse first, then a battery-rated switch, then one fuse per leg</td>
+<td>The old switch and thin wires could overheat</td>
+</tr>
+<tr>
+<td>Motor power goes round the small adapter board</td>
+<td>That board is limited to 5 A</td>
+</tr>
+<tr>
+<td>A hub of lever connectors in the middle of the deck</td>
+<td>The motor plug fits nothing else, and now nothing needs soldering</td>
+</tr>
+<tr>
+<td>New 5 V converter, USB sound card, the right camera and ribbon</td>
+<td>The old ones would not work with this brain or this battery</td>
+</tr>
+<tr>
+<td>Shorter screws, wider gaps, 8 more deck screws</td>
+<td>The old screws were longer than their holes. Gaps were tighter than a printer's error</td>
+</tr>
+<tr>
+<td>Captive nuts for the head shell and the battery door</td>
+<td>They get opened often</td>
+</tr>
+<tr>
+<td>Three new small printed parts: hub tray, fuse shelf, test piece</td>
+<td>To hold the wiring, and to check the fit first</td>
+</tr>
+<tr>
+<td>One visible change: a toggle switch on the back</td>
+<td>The only cheap switch with a real battery rating</td>
+</tr>
+</tbody>
+</table></div>
+<p>Weight is now 1,253 g (was 1,047 g). Standing, getting up and reaching stay well inside what the motors can do. Long walks are the open question: see "Not proven yet".</p>
+<h2>What is in this pack</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Findings</strong></td>
+<td>All 52 problems, ranked, with proof and the fix</td>
+</tr>
+<tr>
+<td><strong>Print guide</strong></td>
+<td>Every part: which face down, supports, settings, plastic, time. Print the test piece first</td>
+</tr>
+<tr>
+<td><strong>Wiring</strong></td>
+<td>The drawing, every wire, every plug, every pin</td>
+</tr>
+<tr>
+<td><strong>Build guide</strong></td>
+<td>29 steps with a picture and a check each</td>
+</tr>
+<tr>
+<td><strong>Test plan</strong></td>
+<td>One motor, then one leg, then all, then the battery. Pass and fail numbers</td>
+</tr>
+<tr>
+<td><strong>Not proven yet</strong></td>
+<td>What only a real build can show, and six decisions that are yours</td>
+</tr>
+<tr>
+<td>Shopping list (a separate sheet)</td>
+<td>Exact parts, links, counts with spares, tools, totals, four staged orders</td>
+</tr>
+<tr>
+<td><code>scorpion_spider_v0.5.zip</code></td>
+<td>Print files turned the right way up, STEP files, the CAD source, the tools, the three full reviews, and these pages as files</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Do this next</h2>
+<ol>
+<li>Read <strong>Not proven yet</strong>, the part called "Decisions that are yours".</li>
+<li>Check that the brain can be bought, and look at motor set prices (shopping list, top note).</li>
+<li>Place <strong>order 1</strong>. Nothing else.</li>
+<li>Print the test piece. Do test stage A, then B, then C.</li>
+<li>Only when stage C passes, place the other orders.</li>
+</ol>
+<p>If a test fails, the last column of the test plan says what to do. Where it says "tell me", send me the number you measured.</p>
+</section>
+<section class="view" id="view-findings" data-view="findings" aria-labelledby="tab-findings">
+<h1>Findings on v0.4</h1>
+<p>Three separate reviewers checked v0.4: mechanics, electrics, and hardware fit. Each got the files and a checklist, not my opinions. They found <strong>52 problems</strong>. I checked the main ones again myself in the CAD.</p>
+<p>Levels: <span class="pill l1">Level 1 Danger</span> someone or something can get hurt. <span class="pill l2">Level 2 Breaks the build</span> the robot cannot be finished or will not work. <span class="pill l3">Level 3 Fails later</span> works at first, fails later. <span class="pill l4">Level 4 Annoying</span> slows you down.</p>
+<p>Every proof is tagged: <span class="pill tag">Maker document</span> a maker's own document, <span class="pill tag">Measured in CAD</span> measured in the 3D model, <span class="pill tag">Calculated</span> a sum shown here, <span class="pill tag">Open build</span> another open robot that uses the same part, <span class="pill tag guess">Guess</span> not proven. No guess sits inside a level 1 or level 2 item. The full text of all three reviews, with every link, is in the zip in the folder <code>reviews</code>.</p>
+<h2>Level 1: Danger</h2>
+<h3>1. The power switch has no battery rating, and the fuse sat after it <span class="pill l1">Level 1 Danger</span> <span class="pill ok">Fixed in v0.5</span></h3>
+<ul>
+<li><strong>Proof.</strong> v0.4 lists "mini rocker switch" with no maker or rating <span class="pill tag">Measured in CAD</span>. A data sheet for that size class gives 3 A at 250 V mains and no battery figure at all (<a href="https://www.phippselectronics.com/wp-content/uploads/2024/02/2208198.pdf" target="_blank" rel="noopener">phippselectronics.com</a>). Walking pulls 3.3 A through it, all motors jammed 30 A <span class="pill tag">Calculated</span>. The 10 A fuse can pass 13.5 A for ten minutes <span class="pill tag">Maker document</span> (<a href="https://www.farnell.com/datasheets/237771.pdf" target="_blank" rel="noopener">farnell.com</a>). At 13.5 A the contact makes 13.5 x 13.5 x 0.05 ohm = 9.1 W inside a part the size of a fingernail <span class="pill tag">Calculated</span>. v0.4 wired battery, then switch, then fuse, so a short at the switch was not fused.</li>
+<li><strong>Fix.</strong> Fuse first, right after the battery plug. Then a switch with a battery rating: Cole Hersee 5582, 25 A at 12 V DC, screw terminals. +$2.50, +25 g.</li>
+</ul>
+<h3>2. All motor current ran through a board limited to 5 A <span class="pill l1">Level 1 Danger</span> <span class="pill ok">Fixed in v0.5</span></h3>
+<ul>
+<li><strong>Proof.</strong> The bus adapter's maker gives 5 A as its limit <span class="pill tag">Maker document</span> (<a href="https://docs.waveshare.com/Bus_Servo_Adapter_A" target="_blank" rel="noopener">docs.waveshare.com</a>). Motor current: walking 3.3 A, doubled for speeding up 6.6 A, every motor at its rated load 15 x 0.9 = 13.5 A, all jammed 15 x 2.0 = 30 A <span class="pill tag">Calculated</span> <span class="pill tag">Open build</span> (<a href="https://github.com/LuwuDynamics/xgoduck_hardware/blob/master/docs/BOM.md" target="_blank" rel="noopener">github.com</a>).</li>
+<li><strong>Fix.</strong> Power goes from the hub straight to the motors. The board carries data only. $0.</li>
+</ul>
+<h3>3. The thin motor leads had no protection of their own <span class="pill l1">Level 1 Danger</span> <span class="pill ok">Fixed in v0.5</span></h3>
+<ul>
+<li><strong>Proof.</strong> One leg is three motors on one thin lead. Three jammed motors pull 3 x 2.0 = 6.0 A, and 6.8 A on a full pack <span class="pill tag">Calculated</span>. The plug's contacts are rated 2 A. The only fuse was 10 A, far above that. A thin lead at 6.8 A heats by 70 to 177 C in 5 s <span class="pill tag">Calculated</span>.</li>
+<li><strong>Fix.</strong> One 3 A fuse per chain: it opens in 5 s or less at 6 A <span class="pill tag">Maker document</span>. Plus a 1.5 A limit stored in every motor (the value another open robot uses on this motor <span class="pill tag">Open build</span>). About +$14, +50 g.</li>
+</ul>
+<h3>4. The battery was not a real part, and building it meant soldering onto bare lithium cells <span class="pill l1">Level 1 Danger</span> <span class="pill ok">Fixed in v0.5</span></h3>
+<ul>
+<li><strong>Proof.</strong> v0.4 lists "2 x 18650 cells with a protection board" and a "2S USB-C charge board" with no maker and no part number <span class="pill tag">Measured in CAD</span>. So nothing could be checked: cell current, cut-off current, or whether the two cells are kept level. Joining loose cells needs a spot welder or solder on bare cells. A spring holder's leads are 24 AWG, good for 3.5 A <span class="pill tag">Maker document</span> (<a href="https://memoryprotectiondevices.com/datasheets/BH-18650-W/BH-18650-W-datasheet.pdf" target="_blank" rel="noopener">memoryprotectiondevices.com</a>).</li>
+<li><strong>Fix.</strong> A ready-made 2-cell pack with a plug (ZOHD Lionpack 3500 mAh, 10 A cells, 108 g), charged outside the robot on a proper balance charger. The charge board and its USB-C hole in the chassis are gone. Pack +$1 against v0.4's battery lines. Charger $40, once.</li>
+</ul>
+<h3>5. First switch-on was from the battery, with all 15 motors and no limits <span class="pill l1">Level 1 Danger</span> <span class="pill ok">Fixed in v0.5</span></h3>
+<ul>
+<li><strong>Proof.</strong> v0.4's build order fits the battery and then says "first power-up" <span class="pill tag">Measured in CAD</span>. No step tests one motor first. The parts list has no test supply. A 10 A fuse lets 10 A x 8.4 V = 84 W into a wiring mistake <span class="pill tag">Calculated</span>. One motor's stall torque is 15 kg cm: on a fingertip 1 cm from a joint that is 15 kg <span class="pill tag">Calculated</span> <span class="pill tag">Open build</span>.</li>
+<li><strong>Fix.</strong> A stepped test plan: one motor, then one leg, then all, on a supply with a current limit. Limits are stored in each motor before it is ever bolted on. A tested tool does it (<code>servo_tool.py</code>). Supply about $50, once.</li>
+</ul>
+<h2>Level 2: Breaks the build</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Problem</th>
+<th>Proof</th>
+<th>Fix in v0.5</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6</td>
+<td>All 64 screws into the motor cases were longer than their holes <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>Holes are 3.5 mm deep on one face, 4.5 mm on the other <span class="pill tag">Measured in CAD</span> (Feetech's model). M2 x 8 screws reached 5.0 to 6.0 mm in <span class="pill tag">Calculated</span>.</td>
+<td>Flat-head M2 x 5 (2.4 mm in), pan-head M2 x 6 (3.0 and 4.0 mm in)</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>7</td>
+<td>The 120 fork screws ended exactly on the motor case, so joints could jam <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>Screw tip at 11.5 mm, case face at 11.5 mm: gap 0.0 <span class="pill tag">Measured in CAD</span> <span class="pill tag">Calculated</span></td>
+<td>Screw seats raised 0.6 mm. Tip now 0.6 mm clear</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Fork arms ran 0.10 mm from the pocket walls, and 0.00 mm once screwed tight <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>14.6 against 14.5 mm <span class="pill tag">Measured in CAD</span>. A printer is accurate to about 0.2 mm <span class="pill tag">Maker document</span> (<a href="https://help.prusa3d.com/en/article/modeling-with-3d-printing-in-mind_164135/" target="_blank" rel="noopener">help.prusa3d.com</a>)</td>
+<td>Walls thinned to 2.35 mm: gap 0.40 mm when tight</td>
+<td>$0, -2 g</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Sliding fits of 0.10 to 0.25 mm, less than printer error <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>Motor in pocket 0.15 mm a side, fork on horn 0.10, door 0.25 <span class="pill tag">Measured in CAD</span></td>
+<td>All 0.25 mm or more. Door 0.5. A test piece is printed first</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Two shoulder screws hit the shoulder motor <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>Screw head overlaps the motor by 5 mm3 <span class="pill tag">Measured in CAD</span></td>
+<td>Those two are now flat-head, sunk flush</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Two deck screws sat under circuit boards <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>Screw at (36.4, 44.8) inside a board pocket <span class="pill tag">Measured in CAD</span></td>
+<td>New deck layout. A screwdriver reaches all 22 deck screws; eight of them once the hub tray and fuse shelf are lifted off <span class="pill tag">Measured in CAD</span></td>
+<td>$0</td>
+</tr>
+<tr>
+<td>12</td>
+<td>The motor plug fits nothing on the parts list. The "5-way splitter" is not a real part <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>Motor plug pins are 2.0 mm apart, the adapter's sockets 2.5 mm <span class="pill tag">Maker document</span> (Feetech and Waveshare pages)</td>
+<td>Hub of lever connectors. Five motor leads are cut to feed it</td>
+<td>+$18</td>
+</tr>
+<tr>
+<td>13</td>
+<td>The 5 V converter dropped out on a low battery, and needed soldering <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>It needs 6.0 V plus headroom in; the pack sags to 5.8 V <span class="pill tag">Maker document</span> (<a href="https://www.pololu.com/product/2850" target="_blank" rel="noopener">pololu.com</a>) <span class="pill tag">Calculated</span></td>
+<td>Hobbywing UBEC 3A: works down to 5.5 V, has leads</td>
+<td>-$2</td>
+</tr>
+<tr>
+<td>14</td>
+<td>The microphone board has no driver for this brain <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>No driver or setup file exists for the Radxa's chip <span class="pill tag">Maker document</span> (hardware review H-03)</td>
+<td>USB sound card (needs no driver) on a small USB hub</td>
+<td>+$5</td>
+</tr>
+<tr>
+<td>15</td>
+<td>That board also covered all 40 pins, so the motion sensor could not connect <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>40-pin board on a 40-pin header <span class="pill tag">Measured in CAD</span></td>
+<td>Pins are free. Sensor plugs in through a press-on adapter</td>
+<td>+$3</td>
+</tr>
+<tr>
+<td>16</td>
+<td>The battery bay was too short for a real pack <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>Bay 68 mm, real pack 72 mm <span class="pill tag">Measured in CAD</span> <span class="pill tag">Maker document</span></td>
+<td>Bay takes packs up to 74 x 43 x 24 mm</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>17</td>
+<td>There was no wiring design <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>No wire list, sizes, lengths or plugs in v0.4 <span class="pill tag">Measured in CAD</span></td>
+<td>See the Wiring page</td>
+<td></td>
+</tr>
+<tr>
+<td>18</td>
+<td>The camera ribbon was the wrong type <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>Brain socket is 22-pin, camera is 15-pin <span class="pill tag">Maker document</span> (<a href="https://docs.radxa.com/en/zero/zero3/hardware-design/hardware-interface" target="_blank" rel="noopener">docs.radxa.com</a>)</td>
+<td>The right ribbon is on the list</td>
+<td>+$6</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Feetech's Python package cannot drive this motor model <span class="pill l2">Level 2 Breaks the build</span> <span class="pill ok">Fixed in v0.5</span></td>
+<td>The package has no class for this motor family; its ready-made move command writes zero into the current-limit address <span class="pill tag">Measured in CAD</span> (package source)</td>
+<td><code>servo_tool.py</code>, tested on a software model of the bus</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>20</td>
+<td>The brain was out of stock at every seller I could read <span class="pill l2">Level 2 Breaks the build</span> <span class="pill warn">Test step</span></td>
+<td>Sold out at two sellers on 18 Nov 2026</td>
+<td>Stage 0 of the shopping list: check stock first. The 2 GB board fits the same posts</td>
+<td>+$7 if 2 GB</td>
+</tr>
+<tr>
+<td>21</td>
+<td><strong>The real cost is not $500</strong> <span class="pill l2">Level 2 Breaks the build</span> <span class="pill warn">Test step</span></td>
+<td>Parts about $745 at the prices I could read. With printer, plastic, tools and charger about $1,375, before shipping and duty <span class="pill tag">Calculated</span></td>
+<td>Your decision. Orders are staged so you can stop after any stage. A 15-motor set from Feetech's own Alibaba store was $275 in v0.4's list (I could not open that page): it would cut $160</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>Level 3: Fails later</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Problem</th>
+<th>Proof</th>
+<th>What v0.5 does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>22</td>
+<td>Walking loads are above the motors' everyday rating</td>
+<td>Two legs carrying the robot: 5.9 kg cm on a hip lift motor. Rated 3.7, stall 15 <span class="pill tag">Calculated</span> <span class="pill tag">Measured in CAD</span> at 1,253 g</td>
+<td><span class="pill warn">Test step</span> F5 to F7 measure heat. Keep each foot within 30 mm of its hip. A narrower stance would fix it but changes the look: not done</td>
+</tr>
+<tr>
+<td>23</td>
+<td>Each hip motor is held by its last 10 to 13 mm</td>
+<td>Forces there are about 10 times the foot load <span class="pill tag">Calculated</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Eight more deck screws beside the hips. +13 g</td>
+</tr>
+<tr>
+<td>24</td>
+<td>A stiff landing from 5 cm reaches motor stall</td>
+<td><span class="pill tag">Calculated</span></td>
+<td><span class="pill warn">Test step</span> F10, F11. Soft landings are a software job</td>
+</tr>
+<tr>
+<td>25</td>
+<td>No end stops</td>
+<td>A software slip drives parts together at full force <span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Angle limits stored inside every motor, 3 to 5 degrees short of contact</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Head-shell screws cut into plastic and will be opened often</td>
+<td><span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Captive nuts and machine screws</td>
+</tr>
+<tr>
+<td>27</td>
+<td>Battery door screws stood 1.8 mm proud beside the battery leads</td>
+<td><span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Flat-head screws into captive nuts. Nothing sharp inside</td>
+</tr>
+<tr>
+<td>28</td>
+<td>Feet were 0.1 mm loose on their pegs</td>
+<td><span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Socket 0.2 mm smaller, plus a drop of glue. <span class="pill warn">Test step</span> F12</td>
+</tr>
+<tr>
+<td>29</td>
+<td>Plain PLA can soften near warm motors</td>
+<td>Motors may reach 60 C <span class="pill tag">Maker document</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> PETG for every part that holds a motor</td>
+</tr>
+<tr>
+<td>30</td>
+<td>A full pack is 8.4 V, exactly the motors' top limit</td>
+<td><span class="pill tag">Maker document</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Charge to 4.10 V per cell (8.2 V)</td>
+</tr>
+<tr>
+<td>31</td>
+<td>No capacitor on the motor supply</td>
+<td><span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Two 1,000 uF capacitors in the hub</td>
+</tr>
+<tr>
+<td>32</td>
+<td>The pack has no low-voltage cut-off</td>
+<td><span class="pill tag">Maker document</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> $5 alarm on the pack. <span class="pill warn">Test step</span> F9 for the software stop at 6.6 V</td>
+</tr>
+<tr>
+<td>33</td>
+<td>10 A cells run warm if walking is hard</td>
+<td><span class="pill tag">Calculated</span></td>
+<td><span class="pill warn">Test step</span> F6, F7. A stronger pack fits the same bay</td>
+</tr>
+<tr>
+<td>34</td>
+<td>Wire paths were not designed; five places are tight</td>
+<td><span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Hub in the middle of the deck. Reach checked. <span class="pill warn">Test step</span> C2</td>
+</tr>
+<tr>
+<td>35</td>
+<td>Camera type untested on this brain</td>
+<td><span class="pill tag">Open build</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Raspberry Pi Camera V2, proven on this brain by another open robot. +$11</td>
+</tr>
+<tr>
+<td>36</td>
+<td>The brain runs hot in a closed shell</td>
+<td>Chip slows itself at 85 C <span class="pill tag">Maker document</span></td>
+<td>Heatsink added. <span class="pill warn">Test step</span> E7</td>
+</tr>
+<tr>
+<td>37</td>
+<td>Microphones sat 37 mm below their holes</td>
+<td><span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Sound card is taped right under the holes. <span class="pill warn">Test step</span> F14</td>
+</tr>
+<tr>
+<td>38</td>
+<td>Motion sensor loose, direction not written down</td>
+<td><span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Two screws. Direction is in the build guide</td>
+</tr>
+<tr>
+<td>39</td>
+<td>One USB port gives 0.5 A for everything</td>
+<td><span class="pill tag">Maker document</span></td>
+<td><span class="pill warn">Test step</span> D5</td>
+</tr>
+<tr>
+<td>40</td>
+<td>Wifi untested inside the shell</td>
+<td></td>
+<td><span class="pill warn">Test step</span> E8</td>
+</tr>
+<tr>
+<td>41</td>
+<td>No spare motor leads</td>
+<td><span class="pill tag">Measured in CAD</span></td>
+<td><span class="pill ok">Fixed in v0.5</span> Five spares on the list</td>
+</tr>
+<tr>
+<td>42</td>
+<td>Wiring adds weight</td>
+<td>Robot is now 1,253 g, was 1,047 g <span class="pill tag">Measured in CAD</span></td>
+<td>Loads re-run at the new weight. <span class="pill warn">Test step</span> E6</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Level 4: Annoying</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Problem</th>
+<th>What v0.5 does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>43</td>
+<td>Four parts need print supports the old README said they did not</td>
+<td><span class="pill ok">Fixed in v0.5</span> Print guide</td>
+</tr>
+<tr>
+<td>44</td>
+<td>Nothing said how a fork gets over the two screw heads on a motor</td>
+<td><span class="pill ok">Fixed in v0.5</span> Build guide step 9</td>
+</tr>
+<tr>
+<td>45</td>
+<td>All three wires of a motor lead are black</td>
+<td><span class="pill ok">Fixed in v0.5</span> Tape them before cutting. Tests B2 and B4 check</td>
+</tr>
+<tr>
+<td>46</td>
+<td>Charging means opening the belly door</td>
+<td><span class="pill ok">No change needed</span> Four screws. Safer than charging inside</td>
+</tr>
+<tr>
+<td>47</td>
+<td>Memory card and USB ports need the head shell off</td>
+<td><span class="pill ok">No change needed</span> Do daily work over wifi. A hole in the shell would change the look</td>
+</tr>
+<tr>
+<td>48</td>
+<td>Arm lead too short to lay the shell down</td>
+<td><span class="pill ok">Fixed in v0.5</span> Lead lengthened by 150 mm</td>
+</tr>
+<tr>
+<td>49</td>
+<td>Microphones share a box with motors and a converter</td>
+<td><span class="pill warn">Test step</span> F14</td>
+</tr>
+<tr>
+<td>50</td>
+<td>Pinch points at the joints</td>
+<td>Build guide warning. Low torque limit for all desk tests</td>
+</tr>
+<tr>
+<td>51</td>
+<td>Two reach poses bring the claw within 0.4 mm of the floor</td>
+<td><span class="pill ok">No change needed</span> Same as v0.4. They do not touch</td>
+</tr>
+<tr>
+<td>52</td>
+<td>Training needs a robot description file and real motor data</td>
+<td><span class="pill l4">For later</span> Not in this job. Test E6 gives the masses</td>
+</tr>
+</tbody>
+</table></div>
+<h2>What I checked and left alone</h2>
+<p>Same as v0.4, on purpose:</p>
+<ul>
+<li><strong>15 motors, same motor.</strong> Standing needs 1.4 kg cm per hip lift motor against a rating of 3.7 <span class="pill tag">Calculated</span>. No stronger motor is needed to stand, get up or reach.</li>
+<li><strong>Size, shape and look.</strong> Pillow body, cream, coral and mint, two 41 mm black eyes, no smile, no eye rings.</li>
+<li><strong>Leg and arm lengths, and all 16 poses.</strong> All 16 pass the collision check again in v0.5 <span class="pill tag">Measured in CAD</span>.</li>
+<li><strong>Balance.</strong> 84 mm or more to spare on four feet, with 100 g in the claw at full reach <span class="pill tag">Calculated</span>.</li>
+<li><strong>Fork strength.</strong> 2.6 times spare at motor stall <span class="pill tag">Calculated</span>.</li>
+<li><strong>One camera, wifi, 1 GB brain.</strong></li>
+<li><strong>Every part still fits a 180 x 180 mm printer bed.</strong></li>
+</ul>
+<h2>Money</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>v0.4 said</th>
+<th>v0.5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parts inside the robot, with spares</td>
+<td>$500 target</td>
+<td>$757</td>
+</tr>
+<tr>
+<td>Printer, plastic, glue</td>
+<td>not counted</td>
+<td>$295</td>
+</tr>
+<tr>
+<td>Tools, charger, test supply</td>
+<td>not counted</td>
+<td>$321</td>
+</tr>
+<tr>
+<td><strong>Sum of the shopping list</strong></td>
+<td></td>
+<td><strong>$1,373</strong></td>
+</tr>
+<tr>
+<td>Shipping and import duty</td>
+<td>not counted</td>
+<td>$60 to $220 <span class="pill tag guess">Guess</span></td>
+</tr>
+<tr>
+<td><strong>First robot, all in</strong></td>
+<td></td>
+<td><strong>about $1,430 to $1,590</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>$471 of the $1,373 is my estimate, where a seller's price could not be read. Each such line is marked in the sheet.</p>
+<p>The split, links and exact counts are in the shopping list sheet.</p>
+</section>
+<section class="view" id="view-print" data-view="print" aria-labelledby="tab-print">
+<h1>Print guide</h1>
+<p>You have no printer yet. The shopping list names one that fits every part: the Bambu Lab A1 mini (bed 180 x 180 mm). The largest part is 144 x 138 mm. The tallest is 120 mm.</p>
+<p>Every file in the zip folder <code>stl</code> is <strong>already turned the right way up</strong>. Load it, do not rotate it, and press "lay flat" only if the slicer asks. (Slicer: the free program that turns a shape into printer moves. For this printer it is Bambu Studio.)</p>
+<h2>Settings for every part</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nozzle</td>
+<td>0.4 mm</td>
+<td>Standard</td>
+</tr>
+<tr>
+<td>Layer height</td>
+<td>0.20 mm</td>
+<td>Standard. Another open robot with this motor prints at the same <span class="pill tag">Open build</span></td>
+</tr>
+<tr>
+<td>Walls (also called perimeters)</td>
+<td>3, or 4 where the table says</td>
+<td>4 walls on every part that carries a leg or arm load</td>
+</tr>
+<tr>
+<td>Fill (infill)</td>
+<td>15%, pattern "gyroid"</td>
+<td></td>
+</tr>
+<tr>
+<td>Top and bottom layers</td>
+<td>5</td>
+<td>1.0 mm of solid skin</td>
+</tr>
+<tr>
+<td>Elephant foot compensation</td>
+<td>0.2 mm</td>
+<td>The first layer flares out. This trims it, so motors slide into their pockets</td>
+</tr>
+<tr>
+<td>Supports</td>
+<td>Off, unless the table says</td>
+<td>"Build plate only" means supports that start on the bed, never on the part</td>
+</tr>
+<tr>
+<td>Bed and nozzle temperature</td>
+<td>The slicer's own preset for the plastic you load</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Plastic.</strong> PETG for every part that holds a motor: plain PLA can soften at 60 C, and the motors may reach that <span class="pill tag">Maker document</span>. The head shell may be PLA (it looks best) for indoor use. Never leave the robot in a hot car. Feet are TPU 95A, a soft plastic. Dry the TPU and PETG spools if they have been open for weeks: wet plastic prints rough and weak.</p>
+<h2>Table of parts</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Count</th>
+<th>File</th>
+<th>Plastic and colour</th>
+<th>Which face is down</th>
+<th>Supports</th>
+<th>Walls</th>
+<th>Fill</th>
+<th>Brim</th>
+<th>Size on the bed, mm</th>
+<th>Plastic each</th>
+<th>Time each</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Test piece (print first)</td>
+<td>1</td>
+<td><code>test_piece_x1.stl</code></td>
+<td>PETG, any colour</td>
+<td>Flat base down</td>
+<td>None</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>75 x 39 x 26</td>
+<td>15 g</td>
+<td>1.4 h</td>
+</tr>
+<tr>
+<td>Hip bracket</td>
+<td>4</td>
+<td><code>hip_x4.stl</code></td>
+<td>PETG, coral</td>
+<td>On its side</td>
+<td>Yes: only under the upper wall of the motor pocket</td>
+<td>4</td>
+<td>15%</td>
+<td>5 mm</td>
+<td>50 x 46 x 28</td>
+<td>12 g</td>
+<td>1.1 h</td>
+</tr>
+<tr>
+<td>Thigh</td>
+<td>4</td>
+<td><code>thigh_x4.stl</code></td>
+<td>PETG, cream</td>
+<td>Standing on its open end, fork up</td>
+<td>Yes: "build plate only"</td>
+<td>4</td>
+<td>15%</td>
+<td>8 mm</td>
+<td>30 x 39 x 58</td>
+<td>17 g</td>
+<td>1.5 h</td>
+</tr>
+<tr>
+<td>Shin</td>
+<td>4</td>
+<td><code>shin_x4.stl</code></td>
+<td>PETG, cream</td>
+<td>Standing on its heel, foot peg up</td>
+<td>None</td>
+<td>4</td>
+<td>15%</td>
+<td>8 mm</td>
+<td>29 x 39 x 120</td>
+<td>29 g</td>
+<td>2.6 h</td>
+</tr>
+<tr>
+<td>Foot</td>
+<td>4</td>
+<td><code>foot_x4.stl</code></td>
+<td>TPU 95A, mint</td>
+<td>Flat face down</td>
+<td>None</td>
+<td>3</td>
+<td>30%</td>
+<td>none</td>
+<td>27 x 27 x 20</td>
+<td>6 g</td>
+<td>0.7 h</td>
+</tr>
+<tr>
+<td>Chassis</td>
+<td>1</td>
+<td><code>tub_x1.stl</code></td>
+<td>PETG, coral</td>
+<td>Belly down</td>
+<td>Yes: "build plate only" (under the two bars)</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>144 x 138 x 38</td>
+<td>82 g</td>
+<td>5.9 h</td>
+</tr>
+<tr>
+<td>Deck</td>
+<td>1</td>
+<td><code>deck_x1.stl</code></td>
+<td>PETG, coral</td>
+<td>Flat side down, posts up</td>
+<td>None</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>144 x 138 x 36</td>
+<td>50 g</td>
+<td>3.6 h</td>
+</tr>
+<tr>
+<td>Battery door</td>
+<td>1</td>
+<td><code>battery_door_x1.stl</code></td>
+<td>PETG, coral</td>
+<td>Flat plate down</td>
+<td>None</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>47 x 90 x 12</td>
+<td>13 g</td>
+<td>1.2 h</td>
+</tr>
+<tr>
+<td>Hub tray</td>
+<td>1</td>
+<td><code>hub_tray_x1.stl</code></td>
+<td>PETG, coral</td>
+<td>Flat plate down, walls up</td>
+<td>None</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>98 x 37 x 14</td>
+<td>9 g</td>
+<td>0.8 h</td>
+</tr>
+<tr>
+<td>Fuse shelf</td>
+<td>1</td>
+<td><code>shelf_x1.stl</code></td>
+<td>PETG, coral</td>
+<td>Flat plate down, rim up</td>
+<td>None</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>114 x 37 x 5</td>
+<td>9 g</td>
+<td>0.8 h</td>
+</tr>
+<tr>
+<td>Head shell</td>
+<td>1</td>
+<td><code>lid_x1.stl</code></td>
+<td>PLA or PETG, cream</td>
+<td>Roof down</td>
+<td>None</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>144 x 138 x 62</td>
+<td>68 g</td>
+<td>4.9 h</td>
+</tr>
+<tr>
+<td>Shoulder mount</td>
+<td>1</td>
+<td><code>shoulder_mount_x1.stl</code></td>
+<td>PETG, cream</td>
+<td>Base down</td>
+<td>Yes: everywhere</td>
+<td>4</td>
+<td>15%</td>
+<td>none</td>
+<td>44 x 46 x 29</td>
+<td>11 g</td>
+<td>1.0 h</td>
+</tr>
+<tr>
+<td>Upper arm</td>
+<td>1</td>
+<td><code>upper_arm_x1.stl</code></td>
+<td>PETG, cream</td>
+<td>Standing on its open end, fork up</td>
+<td>Yes: "build plate only"</td>
+<td>4</td>
+<td>15%</td>
+<td>8 mm</td>
+<td>32 x 39 x 81</td>
+<td>23 g</td>
+<td>2.1 h</td>
+</tr>
+<tr>
+<td>Forearm with fixed finger</td>
+<td>1</td>
+<td><code>forearm_x1.stl</code></td>
+<td>PETG, cream</td>
+<td>Flat side down</td>
+<td>None</td>
+<td>4</td>
+<td>15%</td>
+<td>none</td>
+<td>130 x 43 x 26</td>
+<td>26 g</td>
+<td>2.4 h</td>
+</tr>
+<tr>
+<td>Palm cap</td>
+<td>1</td>
+<td><code>palm_cap_x1.stl</code></td>
+<td>PETG, coral</td>
+<td>Flat</td>
+<td>None</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>26 x 28 x 2</td>
+<td>2 g</td>
+<td>0.2 h</td>
+</tr>
+<tr>
+<td>Moving finger</td>
+<td>1</td>
+<td><code>finger_x1.stl</code></td>
+<td>PETG, mint</td>
+<td>On its side, blade down</td>
+<td>None</td>
+<td>4</td>
+<td>15%</td>
+<td>none</td>
+<td>56 x 39 x 19</td>
+<td>10 g</td>
+<td>0.9 h</td>
+</tr>
+<tr>
+<td>Eye</td>
+<td>2</td>
+<td><code>eye_x2.stl</code></td>
+<td>PLA, glossy black</td>
+<td>Flat side down</td>
+<td>None</td>
+<td>3</td>
+<td>15%</td>
+<td>none</td>
+<td>41 x 41 x 17</td>
+<td>7 g</td>
+<td>0.6 h</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Brim</strong>: a flat skirt round the first layer that holds a tall, narrow part down. Cut it off afterwards.</li>
+<li>Plastic per part is from the 3D model <span class="pill tag">Calculated</span>: 1.2 mm solid skin and 15% fill, plus 15% for 4-wall parts. Time is a <span class="pill tag guess">Guess</span> at 8 to 14 g per hour. <strong>Your slicer shows the real figures before each print.</strong></li>
+<li>Total: about 590 g of plastic and about 50 hours of printing for 29 pieces. Three 1 kg spools leave plenty for reprints.</li>
+</ul>
+<h2>Print in this order</h2>
+<ol>
+<li><strong>The test piece.</strong> 15 g, about 1.5 hours. Do tests A1 and A2 with it and one motor. If a fit is wrong, one number in <code>parts.py</code> changes and all files are exported again. Do not print anything else until A1 to A5 pass.</li>
+<li><strong>One leg:</strong> one hip bracket, one thigh, one shin, one foot. Build it and do stage C of the test plan.</li>
+<li><strong>Everything else.</strong></li>
+</ol>
+<figure><img alt="The test piece. Left: nut block and screw block. Middle: fork gauge. Right: motor pocket gauge." src="img/test_piece.png" loading="lazy"><figcaption>The test piece. Left: nut block and screw block. Middle: fork gauge. Right: motor pocket gauge.</figcaption></figure>
+<h2>Part by part: what to watch</h2>
+<ul>
+<li><strong>Chassis.</strong> Two bars cross the battery opening, 2.8 mm above the bed and 56 mm long. They need supports ("build plate only"). The four slots for the M3 nuts print without support. A 144 mm part can lift at the corners: clean the bed, keep draughts away.</li>
+<li><strong>Deck.</strong> A 2 mm plate with posts and the two camera rails standing 36 mm tall. Watch the first layer: a plate this size can curl.</li>
+<li><strong>Thigh and upper arm.</strong> They stand on the open mouth of the motor pocket, which is exactly where the first layer flares. Elephant foot compensation matters most here.</li>
+<li><strong>Shin.</strong> 120 mm tall on a 29 x 39 mm foot. The brim keeps it from rocking loose.</li>
+<li><strong>Hip bracket.</strong> Lies on its side. The upper wall of the motor pocket hangs in the air: support only that.</li>
+<li><strong>Shoulder mount.</strong> Small. Supports everywhere. Clean the motor pocket well afterwards.</li>
+<li><strong>Head shell.</strong> Prints roof down. The roof's edge starts at 45 degrees: slow the first 10 mm if the surface looks rough. The eye seats and switch hole need no support.</li>
+<li><strong>Feet.</strong> TPU prints slowly. Use the slicer's TPU preset. The socket is 0.2 mm smaller than the shin's peg on purpose: the foot stretches on.</li>
+<li><strong>Eyes.</strong> Glossy black PLA, flat side down. For a mirror finish, sand lightly and clear-coat. Or print in any plastic and paint.</li>
+<li><strong>Hub tray, fuse shelf, battery door, palm cap.</strong> Flat and easy.</li>
+</ul>
+<h2>After printing, for every part</h2>
+<ol>
+<li>Cut away supports and brim with the flush cutters. Wear the safety glasses: bits fly.</li>
+<li>Check each screw hole is open. Push a 1.5 mm pin or the tip of a small screwdriver through.</li>
+<li>Try the motor in every pocket <strong>before</strong> you start screwing. It must slide in by hand. If it does not, scrape the first-layer flare from the pocket mouth with a blade. Do not force a motor into a pocket.</li>
+</ol>
+<h2>If a fit is wrong</h2>
+<p>All sizes live in one file, <code>source/parts.py</code> (and <code>source/body.py</code> for the body). The numbers you may need:</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Now</th>
+<th>What it sets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CHK_IN</code></td>
+<td>11.75</td>
+<td>Half the gap between the two walls of a motor pocket. The motor is 23.0 mm, the gap 23.5</td>
+</tr>
+<tr>
+<td><code>ARM_IN</code></td>
+<td>14.75</td>
+<td>Half the gap between the two arms of a fork. Across both horns is 29.0 mm, the gap 29.5</td>
+</tr>
+<tr>
+<td><code>M2_PILOT</code></td>
+<td>0.85</td>
+<td>Radius of the hole an M2 tapping screw cuts into</td>
+</tr>
+<tr>
+<td><code>M25_PILOT</code></td>
+<td>1.05</td>
+<td>Same for M2.5</td>
+</tr>
+<tr>
+<td><code>NUT_AF</code> in <code>body.py</code></td>
+<td>5.5</td>
+<td>Width of an M3 nut slot</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then run <code>python export.py --files</code> in the <code>source</code> folder (needs Python with the <code>cadquery</code> package). Or send me the measurements and I will do it.</p>
+</section>
+<section class="view" id="view-wiring" data-view="wiring" aria-labelledby="tab-wiring">
+<h1>Wiring</h1>
+<p>No soldering anywhere. Every joint is a ready-made plug, a screw, or a lever connector.</p>
+<p><strong>Words used here</strong></p>
+<ul>
+<li><strong>Pack</strong>: the battery. Two lithium-ion cells in one wrapped block, 6.6 to 8.4 V.</li>
+<li><strong>Motor</strong>: one of the 15 Feetech HD-1910-C001 servo motors. Each has two identical 3-pin sockets, so motors link one to the next.</li>
+<li><strong>Chain</strong>: three motors linked in a row. There are five chains: four legs and the arm.</li>
+<li><strong>Lever connector</strong>: a small clear block (Wago 221). Lift the orange lever, push a bare wire end in, close the lever. All wires in one block are joined.</li>
+<li><strong>Hub</strong>: the printed tray in the middle of the deck that holds eight lever connectors. All power and data wires meet there.</li>
+<li><strong>Bus adapter</strong>: the small board that turns USB into the motors' data line.</li>
+<li><strong>5 V converter</strong>: turns battery voltage into the 5 V the brain needs (Hobbywing UBEC).</li>
+<li><strong>Brain</strong>: the Radxa Zero 3W computer.</li>
+<li><strong>AWG</strong>: wire thickness. A smaller number is a thicker wire. 16 AWG is about 1.3 mm of copper.</li>
+</ul>
+<h2>The drawing</h2>
+<figure><img alt="Wiring diagram: power path in red and black, data in yellow" src="img/wiring_diagram.png" loading="lazy"><figcaption>Wiring diagram: power path in red and black, data in yellow</figcaption></figure>
+<figure><img alt="Where each part sits in the head, seen from above with the head shell off" src="img/wiring_layout.png" loading="lazy"><figcaption>Where each part sits in the head, seen from above with the head shell off</figcaption></figure>
+<h2>How power flows, and what protects what</h2>
+<ol>
+<li><strong>Pack</strong> to its XT30 plug.</li>
+<li><strong>Main fuse, 7.5 A</strong>, first thing after the plug. It protects every wire after it.</li>
+<li><strong>Switch</strong> on the back of the head. Off means the motors, the converter and the brain are all dead.</li>
+<li><strong>Hub, plus bay.</strong> From here power goes six ways: five chains and the 5 V converter.</li>
+<li><strong>One 3 A fuse per chain.</strong> It protects the thin motor wires.</li>
+<li>Inside each motor: a current limit of 1.5 A and an angle limit, stored by the setup tool.</li>
+</ol>
+<p>Which part cuts power first, case by case <span class="pill tag">Calculated</span> <span class="pill tag">Maker document</span> (fuse times: Littelfuse MINI 297, <a href="https://www.farnell.com/datasheets/237771.pdf" target="_blank" rel="noopener">farnell.com</a>):</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>What goes wrong</th>
+<th>Current</th>
+<th>What opens, and how fast</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One leg jammed, motor limits working</td>
+<td>up to 4.5 A (3 x 1.5 A)</td>
+<td>The motors let go by themselves. Test B7 measures the time.</td>
+</tr>
+<tr>
+<td>One leg jammed, motor limits not working</td>
+<td>6.0 to 6.8 A</td>
+<td>That chain's 3 A fuse, in 0.15 to 5 s</td>
+</tr>
+<tr>
+<td>All 15 motors jammed</td>
+<td>32 to 36 A</td>
+<td>Main fuse, in 0.25 s or less</td>
+</tr>
+<tr>
+<td>Bare plus wire touches bare ground wire after the main fuse</td>
+<td>about 80 A</td>
+<td>Main fuse, in 0.1 s or less</td>
+</tr>
+<tr>
+<td>Walking too hard for too long (above 10 A)</td>
+<td>10 A</td>
+<td>Main fuse, within 10 minutes</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Not protected by any fuse:</strong> the pack's own lead and the short pigtail before the main fuse, about 200 mm in all. Keep them away from screws and sharp edges. Never let the two pack wires touch.</p>
+<h2>Table of every wire</h2>
+<p>Lengths are cut lengths. Cut, fit, then trim. "Bare 11" means strip 11 mm of insulation. "Folded 22" means strip 22 mm and fold the bare copper back on itself, because the wire is thin.</p>
+<p>Connector names: <strong>BP1, BP2, BG</strong> are in the belly. <strong>P1, P2, P3</strong> (plus), <strong>G1, G2, G3</strong> (ground) and <strong>D1, D2</strong> (data) stand in the hub tray. <strong>J1 to J5</strong> join a chain fuse to its chain. <strong>U+ and U-</strong> join the converter to the brain's power lead. <strong>A1, A2, A3</strong> lengthen the arm's lead. <strong>X</strong> parks one unused wire.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>From</th>
+<th>To</th>
+<th>Thickness</th>
+<th>Length mm</th>
+<th>Colour</th>
+<th>End 1 / End 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Pack</td>
+<td>Pack's XT30 plug</td>
+<td>as supplied</td>
+<td>about 100</td>
+<td>red, black</td>
+<td>fitted</td>
+</tr>
+<tr>
+<td>2</td>
+<td>XT30 pigtail, plus</td>
+<td>BP1</td>
+<td>16 AWG</td>
+<td>100</td>
+<td>red</td>
+<td>XT30 plug / bare 11</td>
+</tr>
+<tr>
+<td>3</td>
+<td>XT30 pigtail, minus</td>
+<td>BG</td>
+<td>16 AWG</td>
+<td>100</td>
+<td>black</td>
+<td>XT30 plug / bare 11</td>
+</tr>
+<tr>
+<td>4</td>
+<td>BP1</td>
+<td>BP2, through the main fuse holder (7.5 A)</td>
+<td>holder's own wire</td>
+<td>as supplied</td>
+<td>as supplied</td>
+<td>bare 11 / bare 11</td>
+</tr>
+<tr>
+<td>5</td>
+<td>BP2</td>
+<td>Switch, terminal 1</td>
+<td>16 AWG</td>
+<td>300</td>
+<td>red</td>
+<td>bare 11 / ring terminal</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Switch, terminal 2</td>
+<td>P1</td>
+<td>16 AWG</td>
+<td>300</td>
+<td>red</td>
+<td>ring terminal / bare 11</td>
+</tr>
+<tr>
+<td>7</td>
+<td>BG</td>
+<td>G1</td>
+<td>16 AWG</td>
+<td>200</td>
+<td>black</td>
+<td>bare 11 / bare 11</td>
+</tr>
+<tr>
+<td>8</td>
+<td>P1 to P2, P2 to P3</td>
+<td></td>
+<td>16 AWG</td>
+<td>40 each</td>
+<td>red</td>
+<td>bare 11 both ends</td>
+</tr>
+<tr>
+<td>9</td>
+<td>G1 to G2, G2 to G3</td>
+<td></td>
+<td>16 AWG</td>
+<td>40 each</td>
+<td>black</td>
+<td>bare 11 both ends</td>
+</tr>
+<tr>
+<td>10</td>
+<td>D1 to D2</td>
+<td></td>
+<td>thin wire offcut</td>
+<td>40</td>
+<td>yellow tape</td>
+<td>folded 22 both ends</td>
+</tr>
+<tr>
+<td>11 to 15</td>
+<td>P1 (chains 1, 2), P2 (chains 3, 4, 5)</td>
+<td>J1 to J5, each through a chain fuse holder (3 A)</td>
+<td>holder's own wire</td>
+<td>as supplied</td>
+<td>as supplied</td>
+<td>bare 11 / bare 11</td>
+</tr>
+<tr>
+<td>16 to 20</td>
+<td>J1 to J5</td>
+<td>First motor of each chain, <strong>middle</strong> pin (power)</td>
+<td>motor lead</td>
+<td>140</td>
+<td>black with <strong>red tape</strong></td>
+<td>folded 22 / motor plug</td>
+</tr>
+<tr>
+<td>21 to 25</td>
+<td>G1 (chains 1, 2), G2 (chains 3, 4, 5)</td>
+<td>First motor, outer pin (ground)</td>
+<td>motor lead</td>
+<td>140</td>
+<td>black, <strong>no tape</strong></td>
+<td>folded 22 / same plug</td>
+</tr>
+<tr>
+<td>26 to 30</td>
+<td>D1 (chains 1, 2, 3), D2 (chains 4, 5)</td>
+<td>First motor, outer pin (data)</td>
+<td>motor lead</td>
+<td>140</td>
+<td>black with <strong>yellow tape</strong></td>
+<td>folded 22 / same plug</td>
+</tr>
+<tr>
+<td>31 to 40</td>
+<td>Motor to motor, two per chain</td>
+<td></td>
+<td>motor lead, whole</td>
+<td>150</td>
+<td>black</td>
+<td>motor plug both ends</td>
+</tr>
+<tr>
+<td>41</td>
+<td>Arm chain only: A1, A2, A3 lengthen wires 20, 25 and 30</td>
+<td></td>
+<td>thin wire offcut</td>
+<td>150 each</td>
+<td>taped to match</td>
+<td>folded 22 both ends</td>
+</tr>
+<tr>
+<td>42</td>
+<td>5 V converter, input plus</td>
+<td>P3</td>
+<td>as supplied</td>
+<td>as supplied</td>
+<td>red</td>
+<td>fitted / bare 11</td>
+</tr>
+<tr>
+<td>43</td>
+<td>5 V converter, input minus</td>
+<td>G3</td>
+<td>as supplied</td>
+<td>as supplied</td>
+<td>black</td>
+<td>fitted / bare 11</td>
+</tr>
+<tr>
+<td>44</td>
+<td>5 V converter, output plus (cut its plug off)</td>
+<td>U+</td>
+<td>as supplied</td>
+<td>as supplied</td>
+<td>red</td>
+<td>fitted / bare 11</td>
+</tr>
+<tr>
+<td>45</td>
+<td>5 V converter, output minus</td>
+<td>U-</td>
+<td>as supplied</td>
+<td>as supplied</td>
+<td>black or brown</td>
+<td>fitted / bare 11</td>
+</tr>
+<tr>
+<td>46</td>
+<td>U+ and U-</td>
+<td>Brain, port USB-C 1</td>
+<td>USB-C power pigtail</td>
+<td>cut to 150</td>
+<td>red, black</td>
+<td>bare 11 / USB-C plug</td>
+</tr>
+<tr>
+<td>47</td>
+<td>Capacitor 1</td>
+<td>P1 (long leg) and G1 (leg by the stripe)</td>
+<td>its own legs</td>
+<td></td>
+<td></td>
+<td>legs straight into the connectors</td>
+</tr>
+<tr>
+<td>48</td>
+<td>Capacitor 2</td>
+<td>P3 (long leg) and G3 (leg by the stripe)</td>
+<td>its own legs</td>
+<td></td>
+<td></td>
+<td>legs straight into the connectors</td>
+</tr>
+<tr>
+<td>49</td>
+<td>Bus adapter, motor socket, data pin</td>
+<td>D1</td>
+<td>half of a Waveshare cable</td>
+<td>150</td>
+<td>yellow tape</td>
+<td>3-pin plug / folded 22</td>
+</tr>
+<tr>
+<td>50</td>
+<td>Bus adapter, motor socket, ground pin</td>
+<td>G3</td>
+<td>same half cable</td>
+<td>150</td>
+<td>no tape</td>
+<td>same plug / folded 22</td>
+</tr>
+<tr>
+<td>51</td>
+<td>Bus adapter, motor socket, power pin</td>
+<td>X, alone</td>
+<td>same half cable</td>
+<td>150</td>
+<td>red tape</td>
+<td>same plug / parked</td>
+</tr>
+<tr>
+<td>52</td>
+<td>Brain, port USB-C 2</td>
+<td>USB hub</td>
+<td>hub's own lead, or a short USB-C cable</td>
+<td>150</td>
+<td></td>
+<td>USB-C</td>
+</tr>
+<tr>
+<td>53</td>
+<td>USB hub</td>
+<td>Bus adapter</td>
+<td>USB-C cable</td>
+<td>150</td>
+<td></td>
+<td>USB-C both ends</td>
+</tr>
+<tr>
+<td>54</td>
+<td>USB hub</td>
+<td>Sound card (under the roof)</td>
+<td>USB-C cable</td>
+<td>300</td>
+<td></td>
+<td>USB-C both ends</td>
+</tr>
+<tr>
+<td>55</td>
+<td>Sound card</td>
+<td>Speaker</td>
+<td>speaker's own lead</td>
+<td>as supplied</td>
+<td></td>
+<td>2-pin plug</td>
+</tr>
+<tr>
+<td>56</td>
+<td>Brain header pins 1 to 6 (press-on adapter)</td>
+<td>Motion sensor</td>
+<td>4-wire sensor cable</td>
+<td>100</td>
+<td></td>
+<td>small 4-pin plug both ends</td>
+</tr>
+<tr>
+<td>57</td>
+<td>Brain camera socket</td>
+<td>Camera</td>
+<td>ribbon, 22-pin to 15-pin</td>
+<td>150</td>
+<td></td>
+<td>ribbon</td>
+</tr>
+<tr>
+<td>58</td>
+<td>Pack's small 3-pin plug</td>
+<td>Low-battery alarm (in the robot) or charger (on the desk)</td>
+<td>as supplied</td>
+<td></td>
+<td></td>
+<td>3-pin plug</td>
+</tr>
+</tbody>
+</table></div>
+<p>Wires 5, 6 and 54 are long on purpose: the head shell carries the switch and the sound card, and must lift off and lie beside the robot.</p>
+<p><strong>Chain order.</strong> Hub, then hip turn motor, then hip lift motor, then knee motor. For the arm: hub, shoulder, elbow, claw. Chain 1 = front right leg, 2 = front left, 3 = back right, 4 = back left, 5 = arm.</p>
+<p><strong>Do the leads reach?</strong> <span class="pill tag">Measured in CAD</span> From the hub to a hip turn motor's socket is 71 mm (front legs) and 80 mm (back legs) in a straight line. A cut lead gives 140 mm. Inside a leg the runs are 40 mm and 59 mm at the widest joint angle, against a 150 mm lead. Shoulder to elbow is 85 mm, elbow to claw 77 mm.</p>
+<h2>Table of every connector on the brain</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Where on the brain</th>
+<th>Goes to</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>USB-C 1 (power in)</td>
+<td>5 V converter, wire 46</td>
+<td>The only power input. 5 V only. <span class="pill tag">Maker document</span> <a href="https://docs.radxa.com/en/zero/zero3/hardware-design/hardware-interface" target="_blank" rel="noopener">docs.radxa.com</a></td>
+</tr>
+<tr>
+<td>USB-C 2 (host)</td>
+<td>USB hub, then bus adapter and sound card</td>
+<td>The port gives 0.5 A at most for everything on the hub. <span class="pill tag">Maker document</span> <a href="https://dl2.radxa.com/zero3/docs/hw/3w/radxa_zero_3w_product_brief.pdf" target="_blank" rel="noopener">dl2.radxa.com</a></td>
+</tr>
+<tr>
+<td>Camera socket (22-pin ribbon)</td>
+<td>Camera</td>
+<td></td>
+</tr>
+<tr>
+<td>Card slot</td>
+<td>microSD card with the system</td>
+<td></td>
+</tr>
+<tr>
+<td>Header pins 1 to 6</td>
+<td>Motion sensor, through the press-on adapter (SparkFun Qwiic SHIM)</td>
+<td>Pin 1 = 3.3 V, pins 2 and 4 = 5 V, pin 3 = data, pin 5 = clock, pin 6 = ground. I2C bus 3. Never feed power in here.</td>
+</tr>
+<tr>
+<td>Header pins 8 and 10</td>
+<td>Nothing. Left free</td>
+<td>The brain's rescue console, if wifi ever fails.</td>
+</tr>
+<tr>
+<td>All other header pins</td>
+<td>Nothing</td>
+<td>Every header signal is 3.3 V. More than 3.63 V on a pin can kill the brain. <span class="pill tag">Maker document</span> same Radxa page</td>
+</tr>
+</tbody>
+</table></div>
+<h2>The motor plug</h2>
+<p><span class="pill tag">Maker document</span> Feetech's page: <a href="https://ftservo.github.io/ftservo-wiki/en/products/models/hd-1910-c001/main/" target="_blank" rel="noopener">ftservo.github.io</a></p>
+<ul>
+<li>3 pins, 2.0 mm apart. The <strong>middle</strong> pin is power. One outer pin is data, the other is ground.</li>
+<li><strong>All three wires are black.</strong> Before you cut a lead, mark the wires with tape (build guide, step 2). Tests B2 and B4 then check every lead with the meter before a motor is plugged in.</li>
+<li>The plug does <strong>not</strong> fit the bus adapter's sockets (those are 2.5 mm). That is why the adapter gets its own cut cable into the hub.</li>
+</ul>
+<h2>Motor numbers</h2>
+<p>Every motor leaves the factory as number 1. The setup tool gives each its own number, one motor at a time.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Chain</th>
+<th>Turn</th>
+<th>Lift</th>
+<th>Knee</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 Front right</td>
+<td>11</td>
+<td>12</td>
+<td>13</td>
+</tr>
+<tr>
+<td>2 Front left</td>
+<td>21</td>
+<td>22</td>
+<td>23</td>
+</tr>
+<tr>
+<td>3 Back right</td>
+<td>31</td>
+<td>32</td>
+<td>33</td>
+</tr>
+<tr>
+<td>4 Back left</td>
+<td>41</td>
+<td>42</td>
+<td>43</td>
+</tr>
+</tbody>
+</table></div>
+<p>Arm: shoulder 51, elbow 52, claw 53. Write the number on each motor with a marker.</p>
+<h2>The numbers behind it</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Limit, with source</th>
+<th>Walking</th>
+<th>All motors jammed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pack cells (Sanyo NCR18650GA)</td>
+<td>10 A <span class="pill tag">Maker document</span></td>
+<td>4.1 to 7.4 A <span class="pill tag">Calculated</span></td>
+<td>Main fuse opens first</td>
+</tr>
+<tr>
+<td>XT30 plug</td>
+<td>15 A steady, 30 A peak</td>
+<td>pass</td>
+<td>36 A for 0.25 s</td>
+</tr>
+<tr>
+<td>16 AWG wire</td>
+<td>22 A</td>
+<td>pass</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>Main fuse 7.5 A</td>
+<td>holds 5.6 A all day</td>
+<td>55 to 99%</td>
+<td>opens</td>
+</tr>
+<tr>
+<td>Switch (Cole Hersee 5582)</td>
+<td>25 A at 12 V DC</td>
+<td>pass</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>Lever connectors (Wago 221)</td>
+<td>20 A</td>
+<td>pass</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>Chain fuse 3 A</td>
+<td>holds 2.25 A all day</td>
+<td>0.9 to 1.9 A per leg</td>
+<td>opens</td>
+</tr>
+<tr>
+<td>Motor plug contact</td>
+<td>2 A</td>
+<td>0.9 to 1.9 A</td>
+<td>cut by motor limit, then chain fuse</td>
+</tr>
+<tr>
+<td>5 V converter</td>
+<td>3 A at 5 V</td>
+<td>1.0 A typical, 2.4 A peak <span class="pill tag guess">Guess</span></td>
+<td>pass</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sums <span class="pill tag">Calculated</span>: at rest 15 x 0.02 A + 0.8 A for the brain = 1.1 A. Walking = 4.1 A, doubled for speeding up and friction = 7.4 A. All jammed at a full pack = 15 x 2.27 A + 1.7 A = 35.7 A. Run time at 4.1 A: 0.8 x 3.5 Ah / 4.1 A = 41 minutes.</p>
+<p>Low battery: with 0.11 ohm in the path, 7.4 A pulls a 6.6 V pack down to 5.8 V <span class="pill tag">Calculated</span>. The converter needs 5.5 V. So the software must sit the robot down at 6.6 V, and the alarm is set to 3.3 V per cell.</p>
+<h2>Charging</h2>
+<p>The pack comes out to charge. Never charge it inside the robot.</p>
+<ol>
+<li>Switch off. Take the belly door off (four screws). Unplug the pack's big plug and its small 3-pin plug.</li>
+<li>On the charger choose: <strong>LiIon</strong>, <strong>2 cells (2S)</strong>, <strong>1.5 A</strong>, <strong>Balance charge</strong>, end voltage <strong>4.10 V per cell</strong>.</li>
+<li>Plug in both pack plugs. Charge on a hard surface, where you can see it. About 3 hours.</li>
+<li>Stop and do not use the pack if it gets hot to the touch or swells.</li>
+</ol>
+<p>Why 4.10 V and not 4.20 V: a full 8.4 V pack sits exactly on the motors' top limit <span class="pill tag">Maker document</span>. 8.2 V leaves a margin.</p>
+</section>
+<section class="view" id="view-build" data-view="build" aria-labelledby="tab-build">
+<h1>Build guide</h1>
+<p>For someone who has never built anything. Do the steps in order. Each step ends with a <strong>Check</strong>. If a check fails, stop and fix it before the next step.</p>
+<h2>Before you start</h2>
+<p><strong>Safety, in four lines</strong></p>
+<ul>
+<li><strong>The battery.</strong> Never let its two wires touch. Never charge it inside the robot. Never use a pack that is hot, swollen or dented. Keep it out of the robot until step 28.</li>
+<li><strong>The motors.</strong> One motor can press with 15 kg at 1 cm from its joint. Keep fingers out of joints whenever power is on. Until step 28 the robot stands on a box with its feet in the air.</li>
+<li><strong>Plugs.</strong> Plug and unplug motors only with the power off.</li>
+<li><strong>Eyes.</strong> Wear the safety glasses when you cut plastic, wire or cable ties.</li>
+</ul>
+<p><strong>Words</strong></p>
+<ul>
+<li><strong>Horn</strong>: the round disc on a motor's shaft. Each motor has two: the driven horn, and a free-turning one on the back (the idler horn).</li>
+<li><strong>Fork</strong>: the two-armed end of a printed part that grips a motor by both horns.</li>
+<li><strong>Pocket</strong>: the box-shaped end of a printed part that a motor slides into.</li>
+<li><strong>Tapping screw</strong>: a screw that cuts its own thread into plastic. <strong>Machine screw</strong>: a screw that needs a nut.</li>
+<li><strong>Pan head</strong>: a screw head that stands proud, round on top. <strong>Flat head</strong>: a cone-shaped head that sinks flush.</li>
+<li><strong>Lever connector</strong>: the small clear block with orange levers (Wago 221). Lift a lever, push a bare wire end in as far as it goes, press the lever down, pull the wire to check.</li>
+<li><strong>Strip</strong>: take the plastic off the end of a wire so the copper shows.</li>
+</ul>
+<p><strong>Screws: where each kind goes</strong></p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Screw</th>
+<th>Count</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M2 x 6 pan-head tapping</td>
+<td>142</td>
+<td>Every fork to its two horns (120). Hip turn motors: 8 up through the chassis, 8 down through the deck. Bus adapter (4). Motion sensor (2)</td>
+</tr>
+<tr>
+<td>M2 x 5 flat-head tapping</td>
+<td>44</td>
+<td>Through the two walls of every motor pocket, 4 per motor, 11 motors</td>
+</tr>
+<tr>
+<td>M2.5 x 8 pan-head tapping</td>
+<td>21</td>
+<td>Deck to chassis (14). Fuse shelf (4). Back of the shoulder mount (2). Palm cap (1)</td>
+</tr>
+<tr>
+<td>M2.5 x 6 pan-head tapping</td>
+<td>6</td>
+<td>Brain (4). Hub tray (2)</td>
+</tr>
+<tr>
+<td>M2.5 x 8 flat-head tapping</td>
+<td>2</td>
+<td>Front of the shoulder mount</td>
+</tr>
+<tr>
+<td>M2.5 x 8 pan-head machine screw, with M2.5 nut</td>
+<td>4</td>
+<td>Head shell to deck</td>
+</tr>
+<tr>
+<td>M3 x 8 flat-head machine screw, with M3 nut</td>
+<td>4</td>
+<td>Battery door</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The golden rule for screws into a motor:</strong> never use a longer screw than the table says. A screw that is too long goes through the motor's case into its gears. Tighten every tapping screw until it stops, then no further: plastic threads strip easily.</p>
+<h2>Part 1. Check the fit</h2>
+<h3>Step 1. Print the test piece and try it on a motor</h3>
+<p>Print <code>test_piece_x1.stl</code> (print guide). Take one motor. Do tests <strong>A1 to A7</strong> in the test plan.</p>
+<figure><img alt="The test piece" src="img/test_piece.png" loading="lazy"><figcaption>The test piece</figcaption></figure>
+<p><strong>Check:</strong> A1 to A7 all pass. Only then print one leg (one hip bracket, one thigh, one shin, one foot).</p>
+<h2>Part 2. Build the hub on the desk</h2>
+<p>Everything electrical is built and tested on the desk first, with the bench supply in place of the battery.</p>
+<h3>Step 2. Mark and cut five motor leads</h3>
+<p>Each motor comes with one lead: three thin black wires with a plug at both ends. Take five leads.</p>
+<ol>
+<li>Hold a plug with the wires toward you. Put <strong>red tape</strong> on the <strong>middle</strong> wire, near the plug. Put <strong>yellow tape</strong> on the <strong>left</strong> wire. Leave the right wire bare. Do exactly the same on all five.</li>
+<li>Cut the far plug off each lead, close to that plug. You now have five "hub leads", each 140 mm long with one plug.</li>
+<li>Strip 22 mm from each of the 15 cut ends with the thin-wire strippers. Twist the copper, fold it back on itself to make a double end 11 mm long.</li>
+</ol>
+<figure><img alt="The motor plug and its three wires" src="img/plug.png" loading="lazy"><figcaption>The motor plug and its three wires</figcaption></figure>
+<p><strong>Check:</strong> five leads, each with one plug, red tape on the middle wire, yellow on the same outer wire of every lead.</p>
+<h3>Step 3. Fill the hub tray</h3>
+<p>Put the printed hub tray on the desk with its two screw tabs toward you.</p>
+<ol>
+<li>Stand eight lever connectors in it, wire holes up: in the left bay D1 (5-way) and D2 (3-way) in the two places nearest you; in the middle bay three 5-way (G1, G2, G3); in the right bay two 5-way (P1, P2) and one 3-way (P3) nearest you. Write the names on them with the marker.</li>
+<li>Cut four pieces of the thick wire, 40 mm each: two red, two black. Strip 11 mm from every end. Bend each into a U.</li>
+<li>Red U from P1 to P2. Red U from P2 to P3. Black U from G1 to G2. Black U from G2 to G3. Use the holes the map shows.</li>
+<li>One thin-wire U (an offcut, both ends folded double) from D1 to D2.</li>
+</ol>
+<figure><img alt="The hub tray with its connectors and the two capacitors" src="img/hub.png" loading="lazy"><figcaption>The hub tray with its connectors and the two capacitors</figcaption></figure>
+<figure><img alt="Map of the hub: which wire goes in which hole" src="img/hub_map.png" loading="lazy"><figcaption>Map of the hub: which wire goes in which hole</figcaption></figure>
+<p><strong>Check:</strong> pull every U. None comes out. Nothing joins one bay to another.</p>
+<h3>Step 4. Capacitors, chain fuses and hub leads</h3>
+<ol>
+<li><strong>Capacitors.</strong> Each has a long leg (plus) and a short leg beside a stripe printed on the can (minus). Spread the legs to about 10 mm. Capacitor 1: long leg into P1, stripe leg into G1, in the holes next to the wall between the two bays. Capacitor 2 the same into P3 and G3. <strong>Stripe leg in the ground bay. Check twice: a capacitor fitted backwards can burst.</strong></li>
+<li><strong>Chain fuses.</strong> Take five fuse holders. Each is a loop of wire with a holder in the middle. Cut each loop at its far end, so the holder has two leads. Strip 11 mm from all ten ends. Push a <strong>3 A</strong> fuse (violet) into each holder. Label them F1 to F5.</li>
+<li>One lead of F1 and F2 into P1. One lead of F3, F4 and F5 into P2.</li>
+<li>The other lead of each holder goes into its own 2-way connector: J1 to J5.</li>
+<li><strong>Hub leads.</strong> For chain 1: red-taped wire into J1, bare (no tape) wire into G1, yellow-taped wire into D1. Chains 2 to 5 the same, using the holes on the map. Label each plug 1 to 5.</li>
+</ol>
+<p><strong>Check:</strong> every capacitor's stripe is on the ground side. Each hub lead has its red wire in a J connector, never straight in the plus bay.</p>
+<h3>Step 5. Bus adapter cable and 5 V converter</h3>
+<ol>
+<li>Cut one Waveshare cable in half. Keep both halves. On one half, find which wire goes to the pin marked <strong>D</strong> (data), <strong>V</strong> and <strong>G</strong> on the adapter board: plug it into the adapter's motor socket and read the print on the board. Tape D yellow, V red.</li>
+<li>Strip and fold the three ends. D into D1. G into G3. V alone into a 2-way connector marked X. Nothing else ever goes into X.</li>
+<li>The 5 V converter has a small jumper (a plastic cap on pins) marked 5 V / 6 V. <strong>Put it on 5 V.</strong> Its two input wires: red into P3, black into G3.</li>
+<li>Cut the plug off the converter's output lead. Strip 11 mm. Red into a 2-way connector marked U+, black (or brown) into one marked U-. <strong>Do not join the brain's lead yet.</strong></li>
+</ol>
+<figure><img alt="The whole wiring. Numbers are rows of the wire table on the Wiring page" src="img/wiring_diagram.png" loading="lazy"><figcaption>The whole wiring. Numbers are rows of the wire table on the Wiring page</figcaption></figure>
+<p><strong>Check:</strong> the jumper is on 5 V. U+ and U- each hold one wire only.</p>
+<h3>Step 6. Power wires, switch and main fuse. First power</h3>
+<ol>
+<li>Cut the thick wire: red 300 mm (wire 5), red 300 mm (wire 6), black 200 mm (wire 7). Strip 11 mm from every end.</li>
+<li>Crimp a ring terminal onto one end of wire 5 and one end of wire 6: push the bare copper into the terminal's sleeve, squeeze hard with the crimping pliers, pull to check. Screw one onto each of the switch's two terminals. Wrap each terminal in two turns of electrical tape so no metal shows.</li>
+<li>Wire 6 into P1. Wire 7 into G1.</li>
+<li>Main fuse holder: cut its loop as before, strip both ends, fit a <strong>3 A</strong> fuse for now. One lead into a 2-way connector BP1, the other into BP2. Wire 5's free end into BP2.</li>
+<li>You have two XT30 leads that plug into each other. Take either one: red into BP1, black into a 2-way connector BG, together with wire 7's free end. This is the robot's battery lead.</li>
+<li>The other one is the supply lead. Clip the supply's red clip to its red wire and the black clip to its black wire. Keep the two clips apart. Plug the two XT30 leads together only when a test says to switch on.</li>
+<li>Do tests <strong>B1, B2 and B3</strong>.</li>
+</ol>
+<figure><img alt="Desk set-up: the supply stands in for the battery" src="img/desk_setup.png" loading="lazy"><figcaption>Desk set-up: the supply stands in for the battery</figcaption></figure>
+<p><strong>Check:</strong> B1, B2 and B3 pass. With the switch on and no motor, the supply shows less than 0.05 A after a few seconds. More than that: switch off at once, a capacitor is backwards.</p>
+<h3>Step 7. Number and centre every motor</h3>
+<p>Do tests <strong>B4 to B9</strong>. One motor on a hub lead at a time. The tool gives each motor its number, stores its safety limits, and turns it to the middle of its range.</p>
+<p>Write the number on each motor. Lay the motors out in five rows: 11 12 13, 21 22 23, 31 32 33, 41 42 43, 51 52 53.</p>
+<p><strong>Check:</strong> 15 motors (or the first 3 if you bought 3), each numbered, each at its middle. From now on do not turn a horn by hand more than you must.</p>
+<h2>Part 3. One leg</h2>
+<p>Build one whole leg and test it before you print the rest.</p>
+<h3>Step 8. Knee motor into the thigh</h3>
+<p>Motor 13. The thigh is the short link with a pocket at one end and a fork at the other.</p>
+<ol>
+<li>Plug a whole lead into either socket of the motor. Lay its wire in the slot in the pocket's wall.</li>
+<li>One wall of the pocket has a notch cut out of it. Turn the motor so its two sockets will sit in that notch. Slide the motor into the pocket, long end first.</li>
+<li>Four <strong>M2 x 5 flat-head</strong> screws through the pocket walls, two each side.</li>
+</ol>
+<figure><img alt="Knee motor (yellow) in the thigh's pocket" src="img/knee_motor.png" loading="lazy"><figcaption>Knee motor (yellow) in the thigh's pocket</figcaption></figure>
+<p><strong>Check:</strong> the motor does not rock. The screw heads sit flush. The wire is not trapped.</p>
+<h3>Step 9. Shin onto the knee motor</h3>
+<p>A fork cannot pass the screw head in the middle of each horn. So:</p>
+<ol>
+<li>Take out the centre screw of both horns of the knee motor. Do not pull the driven horn off its shaft.</li>
+<li>Hold the shin at about 90 degrees to the thigh. Slide its fork over both horns from the motor's short end.</li>
+<li>Put both centre screws back through the fork's two large holes.</li>
+<li>Turn the shin until four small fork holes line up with four horn holes on each side, as near to 90 degrees as they allow. Eight <strong>M2 x 6 pan-head</strong> screws, four each side.</li>
+</ol>
+<figure><img alt="The shin's fork (yellow) on the knee motor" src="img/shin.png" loading="lazy"><figcaption>The shin's fork (yellow) on the knee motor</figcaption></figure>
+<p><strong>Check:</strong> the knee swings freely by hand. Nothing scrapes. No screw tip touches the motor's case.</p>
+<h3>Step 10. Foot</h3>
+<p>Put one drop of flexible glue on the shin's square peg. Push the soft foot on until it stops. It is tight on purpose.</p>
+<figure><img alt="Foot (yellow) on the shin" src="img/foot.png" loading="lazy"><figcaption>Foot (yellow) on the shin</figcaption></figure>
+<p><strong>Check:</strong> the foot cannot be pulled off by hand after the glue has set (about a day).</p>
+<h3>Step 11. Lift motor into the hip bracket</h3>
+<p>Motor 12.</p>
+<ol>
+<li>Plug the free end of the knee's lead into one socket of motor 12. Plug a second whole lead into its other socket.</li>
+<li>Turn the motor so its two sockets sit in the notch of the pocket's wall. Slide it into the hip bracket's pocket, long end down. Pass the second lead out through the bracket's window.</li>
+<li>Four <strong>M2 x 5 flat-head</strong> screws.</li>
+</ol>
+<figure><img alt="Lift motor (yellow) in the hip bracket" src="img/lift_motor.png" loading="lazy"><figcaption>Lift motor (yellow) in the hip bracket</figcaption></figure>
+<p><strong>Check:</strong> motor firm, heads flush, both leads free.</p>
+<h3>Step 12. Thigh onto the lift motor. Test the leg</h3>
+<ol>
+<li>As in step 9: centre screws out, slide the thigh's fork over the lift motor from above, centre screws back, eight <strong>M2 x 6 pan-head</strong> screws.</li>
+<li>Plug the bracket's free lead into motor 11, which lies loose on the desk for now. Plug hub lead 1 into motor 11's other socket.</li>
+<li>Do stage <strong>C</strong> of the test plan. During it, set each joint's zero: hold the knee at 90 degrees (use the corner of a card) and run <code>zero --id 13</code>. Hold the thigh level with the top of the hip bracket and run <code>zero --id 12</code>.</li>
+</ol>
+<figure><img alt="One finished leg" src="img/thigh_on.png" loading="lazy"><figcaption>One finished leg</figcaption></figure>
+<p><strong>Check:</strong> stage C passes. Now print everything else.</p>
+<h2>Part 4. The body</h2>
+<h3>Step 13. The other three legs</h3>
+<p>Repeat steps 8 to 12 with motors 22 and 23, 32 and 33, 42 and 43. Keep each leg with its own turn motor (21, 31, 41).</p>
+<figure><img alt="Four legs, before they go on the body" src="img/four_legs.png" loading="lazy"><figcaption>Four legs, before they go on the body</figcaption></figure>
+<p><strong>Check:</strong> four legs. Each knee and each lift joint swings freely.</p>
+<h3>Step 14. Chassis: nuts and main fuse</h3>
+<ol>
+<li>Slide an M3 nut into each of the four slots in the two bars inside the chassis, from the side that faces the battery opening. A dab of glue on the outer face of each nut keeps it in.</li>
+<li>Switch off and unplug the supply. Open BP2 and take wire 5 out. Open BG and take wire 7 out.</li>
+<li>Lay the main fuse holder with BP1 and BP2 on the belly floor at the robot's left. Tie it to the two little bridges there with a cable tie. Leave BP2 and BG loose, within reach of the battery opening. The XT30 lead hangs out through the opening.</li>
+</ol>
+<figure><img alt="The chassis from above. The two bars cross the battery opening" src="img/chassis.png" loading="lazy"><figcaption>The chassis from above. The two bars cross the battery opening</figcaption></figure>
+<p><strong>Check:</strong> four nuts in. The fuse holder cannot slide. BP2 and BG can be pulled out through the battery opening.</p>
+<h3>Step 15. Turn motors into the chassis</h3>
+<p>Motors 11, 21, 31, 41: front right, front left, back right, back left. "Right" is the robot's own right, with its eyes facing forward.</p>
+<ol>
+<li>Seat each motor in its corner slot: short end (the horns) pointing out of the corner, sockets up.</li>
+<li>Turn the chassis over. Two <strong>M2 x 6 pan-head</strong> screws up into each motor, eight in all. The holes are deep: the screwdriver's shaft must be 4 mm or thinner.</li>
+</ol>
+<figure><img alt="The four turn motors (yellow) in the chassis corners" src="img/turn_motors.png" loading="lazy"><figcaption>The four turn motors (yellow) in the chassis corners</figcaption></figure>
+<p><strong>Check:</strong> each motor sits flat on its pad. Eight screws in.</p>
+<h3>Step 16. Deck</h3>
+<ol>
+<li>Lower the deck onto the chassis. The four motors' sockets show through the deck's corner cut-outs.</li>
+<li>Two <strong>M2 x 6 pan-head</strong> screws down into each turn motor, eight in all.</li>
+<li>Fourteen <strong>M2.5 x 8 pan-head</strong> tapping screws into the chassis posts.</li>
+<li>Drop an M2.5 nut into the slot in each of the four small blocks at the deck's left and right edges. Put a square of tape over each slot.</li>
+</ol>
+<figure><img alt="The deck (yellow) on the chassis" src="img/deck_on.png" loading="lazy"><figcaption>The deck (yellow) on the chassis</figcaption></figure>
+<p><strong>Check:</strong> 8 + 14 screws in. The deck does not rock. Four nuts taped in.</p>
+<h3>Step 17. Motion sensor and hub tray</h3>
+<ol>
+<li><strong>Motion sensor.</strong> Sit it on its four small posts in the middle of the deck, long side across the robot, with the printed "X" arrow pointing to the robot's front. If the arrow can only point sideways, write down which way: the software needs to know. Two <strong>M2 x 6</strong> screws in opposite corners. Plug the 4-wire cable into it and lay the cable toward the back.</li>
+<li>Thread wires 5 and 7 down through the slot in the deck. Reach in through the battery opening: wire 5 into BP2, wire 7 into BG.</li>
+<li>Sit the hub tray on its two posts and two pads, over the motion sensor, tabs toward the back. Two <strong>M2.5 x 6</strong> screws.</li>
+<li>Lay hub lead 1 toward the front right corner, 2 front left, 3 back right, 4 back left.</li>
+</ol>
+<figure><img alt="Motion sensor and hub tray (yellow) in the middle of the deck" src="img/sensor_hub.png" loading="lazy"><figcaption>Motion sensor and hub tray (yellow) in the middle of the deck</figcaption></figure>
+<p><strong>Check:</strong> the sensor does not move. Pull wires 5 and 7 at both ends: they hold. Each hub lead reaches the sockets of its corner's motor with slack.</p>
+<h3>Step 18. Legs onto the turn motors</h3>
+<p>For each leg, plugs first, fork second:</p>
+<ol>
+<li>Plug that corner's hub lead into one socket of the turn motor. Plug the lead from the leg's lift motor into the other socket. The two sockets are the same.</li>
+<li>Take out the turn motor's two centre screws. Slide the hip bracket's fork over its horns from outside. Centre screws back.</li>
+<li>Point the leg straight out along its corner. Eight <strong>M2 x 6 pan-head</strong> screws: four from above, four from below.</li>
+</ol>
+<figure><img alt="Hip brackets (yellow) on the four turn motors" src="img/legs_on.png" loading="lazy"><figcaption>Hip brackets (yellow) on the four turn motors</figcaption></figure>
+<p><strong>Check:</strong> each leg swings left and right by hand without touching the chassis. Both leads at each corner have slack at both ends of the swing, and neither is under a fork arm.</p>
+<h3>Step 19. Brain</h3>
+<ol>
+<li><strong>Card.</strong> On your computer, download "Armbian Minimal, vendor kernel" for the Radxa ZERO 3 from <a href="https://www.armbian.com/radxa-zero-3/" target="_blank" rel="noopener">armbian.com</a> and write it to the card with the Armbian imager. Type your wifi name and password, a user name and a password into the imager. Push the card into the brain.</li>
+<li>Stick the heatsink on the largest chip.</li>
+<li>Press the small adapter board (Qwiic SHIM) onto header pins 1 to 6. Radxa's pin picture shows which end is pin 1: <a href="https://docs.radxa.com/en/zero/zero3/hardware-design/hardware-interface" target="_blank" rel="noopener">docs.radxa.com</a>. SparkFun's page shows how the board sits: <a href="https://www.sparkfun.com/sparkfun-qwiic-shim-for-raspberry-pi.html" target="_blank" rel="noopener">sparkfun.com</a>. <strong>One pin out of place puts 5 V where 3.3 V belongs. Compare with both pictures before you go on.</strong></li>
+<li>Lift the tiny latch of the brain's ribbon socket, push the narrow end of the camera ribbon in, close the latch.</li>
+<li>Four <strong>M2.5 x 6</strong> screws hold the brain on its posts at the back of the deck, pin rows toward the back, USB sockets toward the front.</li>
+<li>Plug the sensor's cable into the adapter board. Slide the ribbon forward under the hub tray, over the motion sensor.</li>
+</ol>
+<figure><img alt="The brain (yellow) at the back of the deck" src="img/brain.png" loading="lazy"><figcaption>The brain (yellow) at the back of the deck</figcaption></figure>
+<p><strong>Check:</strong> the brain's pins are at the back. The adapter board sits on pins 1 to 6 exactly. The ribbon is latched and has no sharp fold.</p>
+<h3>Step 20. Bus adapter and 5 V converter</h3>
+<ol>
+<li>Bus adapter on its four posts at the front of the deck. Four <strong>M2 x 6</strong> screws. Plug its cut cable into its motor socket.</li>
+<li>5 V converter flat on the deck at the right, between its two pairs of slots. Two cable ties through the slots.</li>
+<li>Only after test B3 has passed: USB-C power lead, red into U+, black into U-. Plug it into the brain's socket marked for power (USB-C 1, the "OTG" one).</li>
+</ol>
+<figure><img alt="Bus adapter and 5 V converter (yellow)" src="img/adapter_ubec.png" loading="lazy"><figcaption>Bus adapter and 5 V converter (yellow)</figcaption></figure>
+<p><strong>Check:</strong> converter tied down. Its jumper is still on 5 V.</p>
+<h3>Step 21. Camera</h3>
+<p>Slide the camera board down into the grooves of the two rails at the front of the deck, lens forward. Latch the wide end of the ribbon into the camera's socket. Put a strip of tape across the top of the rails so the board cannot lift.</p>
+<figure><img alt="Camera (yellow) in its rails" src="img/camera.png" loading="lazy"><figcaption>Camera (yellow) in its rails</figcaption></figure>
+<p><strong>Check:</strong> the lens points forward. The ribbon has no sharp fold.</p>
+<h3>Step 22. Fuse shelf</h3>
+<ol>
+<li>Four <strong>M2.5 x 8</strong> screws hold the shelf on its four tall posts, above the bus adapter.</li>
+<li>Tie the five chain fuse holders in a bundle, three under two, with two cable ties. Tie the bundle to the right half of the shelf.</li>
+<li>Tie the USB hub to the left half. Short USB cable from the brain's second socket (USB-C 2) to the hub's "IN". Short USB cable from the hub to the bus adapter.</li>
+</ol>
+<figure><img alt="Fuse shelf with the fuse bundle and the USB hub (yellow)" src="img/shelf.png" loading="lazy"><figcaption>Fuse shelf with the fuse bundle and the USB hub (yellow)</figcaption></figure>
+<figure><img alt="Everything on the deck, from above" src="img/wiring_layout.png" loading="lazy"><figcaption>Everything on the deck, from above</figcaption></figure>
+<p><strong>Check:</strong> nothing on the shelf can slide. Each fuse can still be pulled out of its holder.</p>
+<h3>Step 23. Belly</h3>
+<p>Look in through the battery opening.</p>
+<ol>
+<li>BP1, BP2 and BG closed, each wire pulled to check.</li>
+<li>Tie the low-battery alarm to the two bridges at the robot's right. Set it to 3.3 V with its button.</li>
+</ol>
+<figure><img alt="Belly from above with the deck hidden: main fuse left, alarm right, pack in the middle" src="img/belly.png" loading="lazy"><figcaption>Belly from above with the deck hidden: main fuse left, alarm right, pack in the middle</figcaption></figure>
+<p><strong>Check:</strong> no wire lies across the battery opening.</p>
+<p>Now do stage <strong>D</strong> of the test plan (the brain): plug the supply lead into the robot's battery lead.</p>
+<h2>Part 6. Head shell and arm</h2>
+<h3>Step 24. Inside the head shell</h3>
+<ol>
+<li>Glue the two eyes into their seats.</li>
+<li>Slide the speaker into the two rails on the inside of the back wall.</li>
+<li>Push the switch's threaded neck through the round hole from inside. Lock washer and nut on the outside. The lever's "on" side up. Wires 5 and 6 stay on it.</li>
+<li>Stick the sound card under the roof with foam tape, microphone up, below the left group of five small holes (left as seen from behind the robot).</li>
+<li>Join the speaker's two leads to the 2-pin plug lead with two 2-way connectors. Plug it into the sound card's speaker socket.</li>
+</ol>
+<figure><img alt="Inside the head shell, seen from below: switch, speaker, sound card (yellow)" src="img/shell_inside.png" loading="lazy"><figcaption>Inside the head shell, seen from below: switch, speaker, sound card (yellow)</figcaption></figure>
+<p><strong>Check:</strong> the switch does not turn in its hole. The tape on its two terminals is still whole. The sound card does not peel off when you tug it.</p>
+<h3>Step 25. Shoulder mount and shoulder motor</h3>
+<ol>
+<li>Shoulder mount on the roof: two <strong>M2.5 x 8 flat-head</strong> screws in the two front holes, two <strong>M2.5 x 8 pan-head</strong> in the back. Mount first, motor second.</li>
+<li>Motor 51: plug a whole lead in, slide the motor in from the front over the two flush screws, four <strong>M2 x 5 flat-head</strong> screws.</li>
+</ol>
+<figure><img alt="Shoulder mount and motor (yellow) on the roof" src="img/shoulder.png" loading="lazy"><figcaption>Shoulder mount and motor (yellow) on the roof</figcaption></figure>
+<p><strong>Check:</strong> the two front screw heads are flush. The motor slid in without force.</p>
+<h3>Step 26. Arm</h3>
+<ol>
+<li>Motor 52 into the upper arm's pocket (as step 8), with the shoulder motor's lead plugged in and a second whole lead leaving through the slot.</li>
+<li>Upper arm's fork onto the shoulder motor (as step 9), arm level. Eight <strong>M2 x 6</strong>.</li>
+<li>Motor 53 onto the forearm: two <strong>M2 x 5 flat-head</strong> screws from below, palm cap on top, two more from above through the cap, one <strong>M2.5 x 8 pan-head</strong> into the cap's post. Plug in the lead from motor 52.</li>
+<li>Moving finger's fork onto motor 53, claw shut. Eight <strong>M2 x 6</strong>.</li>
+<li>Forearm's fork onto motor 52, arm straight. Eight <strong>M2 x 6</strong>.</li>
+</ol>
+<figure><img alt="The arm (yellow) on the head shell" src="img/arm.png" loading="lazy"><figcaption>The arm (yellow) on the head shell</figcaption></figure>
+<p><strong>Check:</strong> shoulder, elbow and claw all swing by hand. No lead is tight at either end of a swing.</p>
+<h3>Step 27. Join the shell to the body and close it</h3>
+<ol>
+<li>Lengthen hub lead 5: three 150 mm pieces from the other half of the Waveshare cable, both ends folded, joined to the lead's three wires with three 2-way connectors (A1, A2, A3). Keep the tape colours matched. Feed the plug up through the hole in the roof into motor 51's free socket.</li>
+<li>USB lead from the hub to the sound card.</li>
+<li>With the shell lying beside the robot, do stage <strong>E</strong> tests E1 to E5. Set the zero of every joint that is new since step 12: hold it in its zero pose and run <code>zero --id</code> with its number. Zero poses: leg straight out along its corner; thigh level; knee at 90 degrees; upper arm level; elbow straight; claw shut. Then run <code>all-limits</code>.</li>
+<li>Lower the shell over the deck. No wire under its rim. Four <strong>M2.5 x 8 machine screws</strong> through its sides into the nuts.</li>
+<li>Finish stage E (E6 to E8).</li>
+</ol>
+<figure><img alt="The finished robot from behind. The switch is highlighted" src="img/closed_back.png" loading="lazy"><figcaption>The finished robot from behind. The switch is highlighted</figcaption></figure>
+<p><strong>Check:</strong> stage E passes. Switch off kills everything.</p>
+<h2>Part 7. Battery</h2>
+<h3>Step 28. Pack into the belly</h3>
+<ol>
+<li>Switch <strong>off</strong>. Unplug the supply. Change the main fuse from 3 A to <strong>7.5 A</strong> (brown).</li>
+<li>Do tests F1 and F2: check and charge the pack on the desk.</li>
+<li>Lay the pack in the door's cradle, leads toward the gap in the end lip. A cable tie through the two slots holds it.</li>
+<li>Plug the alarm onto the pack's small 3-pin plug. Plug the pack's XT30 into the robot's XT30. It only fits one way: never force it.</li>
+<li>Push the door up into the belly. Four <strong>M3 x 8 flat-head</strong> machine screws.</li>
+</ol>
+<p>If the pack's plug does not mate with the robot's battery lead: open BP1 and BG and fit the other XT30 lead instead. Red into BP1, black into BG.</p>
+<figure><img alt="Battery door (yellow) in the belly, seen from below" src="img/door.png" loading="lazy"><figcaption>Battery door (yellow) in the belly, seen from below</figcaption></figure>
+<p><strong>Check:</strong> the door is flush. With the switch off, nothing lights. Then go on with test F3.</p>
+<h3>Step 29. Done</h3>
+<figure><img alt="The finished robot" src="img/whole.png" loading="lazy"><figcaption>The finished robot</figcaption></figure>
+<p><strong>Every day</strong></p>
+<ul>
+<li>Switch off before you touch a joint. Take the pack out to charge.</li>
+<li>If the alarm beeps, stop and charge.</li>
+<li>After the first hour, do test F13 (loose screws).</li>
+<li>A blown chain fuse means that leg was jammed. Find out why before you fit a new one. Never fit a bigger fuse.</li>
+</ul>
+</section>
+<section class="view" id="view-tests" data-view="tests" aria-labelledby="tab-tests">
+<h1>Test plan</h1>
+<p>Do the tests in order. <strong>Stop at the first fail</strong> and do what the last column says. Do not skip ahead: each stage protects the parts used in the next one.</p>
+<p>"Meter" = multimeter. "Supply" = the bench power supply with a current limit (shopping list, tools). "The tool" = <code>servo_tool.py</code> in the zip, folder <code>tools</code>. Run it on a laptop with the bus adapter on USB:</p>
+<pre><code>pip install ftservo-python-sdk pyserial
+python servo_tool.py --port /dev/ttyACM0 scan
+</code></pre>
+<p>On Windows the port looks like <code>COM5</code>. On a Mac it looks like <code>/dev/tty.usbmodem...</code>.</p>
+<p><strong>Rules for every powered test</strong></p>
+<ul>
+<li>Wear safety glasses. Keep fingers out of the joints: a motor can pinch hard.</li>
+<li>Until stage F, power comes from the supply, never from the pack.</li>
+<li>Plug or unplug motors only with the power off.</li>
+<li>The robot stands on a box, feet in the air, until test F3.</li>
+</ul>
+<h2>Stage A. Before you print anything else (one motor, no power)</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>What to do</th>
+<th>What to measure</th>
+<th>Pass</th>
+<th>If it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>Print the test piece in PETG (print guide). Remove the two centre screws of one motor. Slide the motor's long end between the two walls. Slide the fork gauge over both round discs (horns).</td>
+<td>Fit by hand</td>
+<td>Motor slides in by hand and wobbles less than 0.5 mm. Fork slides over both horns with no force.</td>
+<td>Tight: in <code>parts.py</code> raise <code>CHK_IN</code> or <code>ARM_IN</code> by 0.1, export, reprint the piece. Loose: lower by 0.1.</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>Still on the test piece: drive an M2 x 6 screw into the small hole of the block and an M2.5 x 8 into the large one. Push an M3 nut into the slot and drive an M3 x 8 screw up into it.</td>
+<td>Does each screw bite and hold</td>
+<td>Each tapping screw turns in with firm force and holds when you pull hard with pliers. The nut slides in and does not turn.</td>
+<td>Screw spins freely: lower <code>M2_PILOT</code> or <code>M25_PILOT</code> by 0.05 and reprint. Splits the block: raise by 0.05. Nut will not go in: raise <code>NUT_AF</code> by 0.2.</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>Measure one motor with the calipers.</td>
+<td>Across both horns. Across both centre screw heads. Depth of a case screw hole (push a pin in, mark it, measure).</td>
+<td>29.0 mm, give or take 0.2. 30.2 mm, give or take 0.3. 3.5 mm on the horn side and 4.5 mm on the other side, give or take 0.3.</td>
+<td>Stop. Send me the numbers: the screw lengths or the fork width must change before you print.</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>Plug a lead into a motor and bend its wires sideways. Lay a steel ruler flat on the idler horn (the disc on the back) so it reaches over the socket.</td>
+<td>Does the plug or wire touch the ruler</td>
+<td>Nothing touches. (The ruler sits where the fork arm will be, 3.0 mm above the case.)</td>
+<td>Stop. Do not print forks. The forks need a cut-out over the sockets.</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>Look at a horn's four small holes. Try one of the screws that came with the motor, then an M2 x 6 tapping screw.</td>
+<td>Which screw goes in and holds</td>
+<td>The M2 x 6 tapping screw bites and holds. Or: the supplied screw fits and is a machine screw.</td>
+<td>If only machine screws hold, buy 120 M2 x 6 machine screws, pan head, in place of the tapping ones. Tell me.</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>Weigh one motor with its lead.</td>
+<td>Grams</td>
+<td>19 to 23 g <span class="pill tag">Maker document</span></td>
+<td>Note the real figure for test E6.</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>Supply at 1.00 A limit. Clip it across one wire of a spare motor lead (plug pin to plug pin). Meter on millivolts across that same wire.</td>
+<td>Millivolts</td>
+<td>22 mV or less: use 3 A chain fuses. <span class="pill tag">Calculated</span> 0.15 m x 0.134 ohm per m = 20 mV</td>
+<td>23 to 35 mV: the wire is thinner. Use the 2 A chain fuses and tell me. Over 35 mV: stop and ask.</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Stage B. One motor on the desk</h2>
+<p>Set up: bus adapter on the laptop's USB. Supply set to <strong>7.4 V, limit 0.5 A</strong>, wired as in build guide step 6. One motor on one hub lead. No brain yet.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>What to do</th>
+<th>What to measure</th>
+<th>Pass</th>
+<th>If it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B1</td>
+<td>Before anything else: hub built, nothing powered. Meter on the beep setting between any plus connector and any ground connector.</td>
+<td>Beep</td>
+<td>A short beep while the capacitors fill, then silence and more than 1,000 ohm</td>
+<td>A wire is in the wrong bay. Find it.</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>Supply on, limit 0.3 A, no motor. At the plug of each of the five hub leads, meter on volts.</td>
+<td>Volts from each pin to a ground connector</td>
+<td>Middle pin = supply voltage within 0.1 V. One outer pin = 0 V. Same side on all five leads.</td>
+<td>Re-seat that lead's wires. Never use a lead that differs from the others.</td>
+</tr>
+<tr>
+<td>B3</td>
+<td>Power the 5 V converter with its output <strong>not</strong> yet joined to the brain's lead.</td>
+<td>Volts across U+ and U-</td>
+<td>4.9 to 5.3 V</td>
+<td>5.9 to 6.1 V: move the converter's jumper to 5 V and repeat. Anything else: replace the converter.</td>
+</tr>
+<tr>
+<td>B4</td>
+<td>First with the adapter's cable <strong>pulled out of the adapter</strong>: plug in one motor, switch on. Then switch off, plug the cable back into the adapter, switch on, run <code>scan</code>.</td>
+<td>Supply current with the adapter unplugged. Then the reply.</td>
+<td>15 to 30 mA. Then motor 1 replies.</td>
+<td>0 mA: the two outer wires are the wrong way round. Power off. On all five hub leads swap the yellow-taped and the bare wire between the data bay and the ground bay, and move the yellow tape. Over 100 mA: power off at once, check the middle wire.</td>
+</tr>
+<tr>
+<td>B5</td>
+<td>Run <code>read --id 1</code>.</td>
+<td>Firmware version. Voltage, temperature.</td>
+<td>Firmware 3.43 or newer. Voltage within 0.3 V of the supply.</td>
+<td>Older firmware: the "zero" command may not exist. Ask the seller before going on.</td>
+</tr>
+<tr>
+<td>B6</td>
+<td>Run <code>setup --new-id 11</code>. Power off, wait 5 s, power on. Run <code>read --id 11</code>.</td>
+<td>The settings after the power cycle</td>
+<td>All read back as written: current limit 231, torque limit 600, temperature limit 65.</td>
+<td>The tool prints which value did not stick. Run setup again. If it fails twice, stop.</td>
+</tr>
+<tr>
+<td>B7</td>
+<td>Supply limit 2.5 A. Run <code>move --id 11 --deg 20</code>. While it moves back with <code>--deg 0</code>, hold the horn still with pliers (cloth in the jaws) for 5 s.</td>
+<td>Supply current. Time until the motor gives up.</td>
+<td>Current stays at 1.6 A or less. The motor lets go within 3 s. Case under 50 C to the touch.</td>
+<td>Does not let go: run setup again, repeat. Still not: do <strong>not</strong> build chains. Tell me.</td>
+</tr>
+<tr>
+<td>B8</td>
+<td>Run <code>centre --id 11</code>. Then fit nothing yet.</td>
+<td>Position reported</td>
+<td>2,048, give or take 5</td>
+<td>Repeat. If it will not hold the middle, the motor is faulty.</td>
+</tr>
+<tr>
+<td>B9</td>
+<td>Repeat B4, B6 and B8 for the other 14 motors, <strong>one motor connected at a time</strong>. Write its number on each.</td>
+<td></td>
+<td>15 motors numbered 11 to 53</td>
+<td>A motor that fails goes back to the seller.</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Stage C. One leg</h2>
+<p>Print one hip bracket, one thigh, one shin and one foot first. Build one leg (build guide steps 8 to 12).</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>What to do</th>
+<th>What to measure</th>
+<th>Pass</th>
+<th>If it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td>Power off. Pull every wire in every lever connector, about as hard as lifting half a litre of water.</td>
+<td>Does any wire move</td>
+<td>None moves</td>
+<td>Strip again, fold double, clamp again.</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>Power off. Move each joint of the leg by hand through its whole range.</td>
+<td>Slack in the lead at the tightest point</td>
+<td>10 mm or more everywhere. Nothing pinched.</td>
+<td>Re-route the lead. If no route works, tell me.</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>Leg clamped to the desk. Supply 7.4 V, limit 2.5 A. <code>scan</code>.</td>
+<td>Replies. Supply current.</td>
+<td>Three motors reply. 40 to 90 mA.</td>
+<td>Find the bad plug: unplug the last motor, scan again.</td>
+</tr>
+<tr>
+<td>C4</td>
+<td><code>limits --id</code> for each of the three motors with the angles the build guide gives. Then <code>move</code> each joint slowly to both ends.</td>
+<td>Does any part touch another</td>
+<td>No contact at either end</td>
+<td>Narrow that limit by 5 degrees.</td>
+</tr>
+<tr>
+<td>C5</td>
+<td>Hold the knee still by hand for 5 s while it tries to move.</td>
+<td>Supply current. <code>read</code> shows voltage at each motor.</td>
+<td>Under 1.6 A. Third motor's voltage within 0.4 V of the first.</td>
+<td>Re-seat plugs. Replace the lead.</td>
+</tr>
+<tr>
+<td>C6</td>
+<td><code>looptest --hz 50 --seconds 200 --write</code></td>
+<td>Late cycles</td>
+<td>99.9% of cycles on time. No failed reads.</td>
+<td>Try another USB port and a shorter USB cable.</td>
+</tr>
+<tr>
+<td>C7</td>
+<td>Weigh the finished leg.</td>
+<td>Grams</td>
+<td>Within 10% of 95 g <span class="pill tag">Measured in CAD</span></td>
+<td>Note it for E6.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Only after stage C passes: print the rest.</p>
+<h2>Stage D. The brain</h2>
+<p>After build guide step 23, head shell not yet on. Supply 7.4 V, limit 1.5 A, plugged into the robot's XT30 lead.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>What to do</th>
+<th>What to measure</th>
+<th>Pass</th>
+<th>If it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>Write the system to the card (build guide step 19). Boot. Log in over wifi. <code>uname -r</code>.</td>
+<td>Kernel name. Supply current.</td>
+<td><code>6.1.115-vendor-rk35xx</code>. 0.2 to 0.7 A at 7.4 V.</td>
+<td>No wifi: check the name and password in the imager. Over 1.0 A: power off, check the 5 V lead.</td>
+</tr>
+<tr>
+<td>D2</td>
+<td><code>sudo i2cdetect -y 3</code></td>
+<td>Sensor address</td>
+<td><code>6a</code> shown</td>
+<td>Check <code>overlays=</code> in <code>/boot/armbianEnv.txt</code>. Re-seat the press-on adapter.</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>Take 100 pictures at 640 x 480. Repeat once the head shell is on (after step 27).</td>
+<td>Log line with <code>imx219</code>. Frames per second. Dark corners.</td>
+<td>Sensor found. 30 per second. No dark corners.</td>
+<td>No camera: flip the ribbon over, then check the overlay name. Dark corners: tell me (the hole would grow to 9 mm, a look change).</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>Plug in the sound card. <code>arecord -l</code>, <code>aplay -l</code>. Record 10 s and play it.</td>
+<td>Card listed. Sound.</td>
+<td>Card shows with no install. Speech is clear at 1 m.</td>
+<td>Try another USB port on the hub.</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>USB meter between brain and hub. Play speech at the loudest setting you will use.</td>
+<td>Current</td>
+<td>Under 450 mA</td>
+<td>Lower the volume cap.</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>Camera on, wifi busy, speaker loud. Meter across U+ and U-.</td>
+<td>Volts</td>
+<td>4.85 V or more</td>
+<td>Shorten the brain's power lead. Lower the volume.</td>
+</tr>
+<tr>
+<td>D7</td>
+<td>Everything running. <code>free -m</code></td>
+<td>"available"</td>
+<td>256 MB or more</td>
+<td>Trim services. If still short, the 2 GB brain.</td>
+</tr>
+<tr>
+<td>D8</td>
+<td>Run C6 again, on the brain, through the hub, with camera and sound running.</td>
+<td>Late cycles in 15,000</td>
+<td>Fewer than 15</td>
+<td>Tell me: the motor data line then moves to header pins 8 and 10.</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Stage E. Whole robot on a box, feet in the air</h2>
+<p>Supply 7.4 V. Start with the limit at 3 A.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>What to do</th>
+<th>What to measure</th>
+<th>Pass</th>
+<th>If it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1</td>
+<td><code>scan</code></td>
+<td>Replies</td>
+<td>15 of 15, each number once</td>
+<td>Unplug one chain at a time to find the missing or double number.</td>
+</tr>
+<tr>
+<td>E2</td>
+<td><code>all-limits</code></td>
+<td>Limits stored</td>
+<td>15 lines ending PASS</td>
+<td>Run it again for the motor that failed.</td>
+</tr>
+<tr>
+<td>E3</td>
+<td><code>read</code></td>
+<td>Idle current on the supply</td>
+<td>0.25 to 0.45 A for the motors</td>
+<td>One motor much higher: check it turns freely.</td>
+</tr>
+<tr>
+<td>E4</td>
+<td><code>move</code> each joint 10 degrees and back, one at a time.</td>
+<td>Any jump. Which way it turns.</td>
+<td>No jump over 5 degrees. Write down which way is plus for each motor.</td>
+<td>Torque off (<code>off</code>). Check that motor's centre (B8) and how its fork sits.</td>
+</tr>
+<tr>
+<td>E5</td>
+<td>With motors holding a pose, flip the switch off.</td>
+<td>Motors</td>
+<td>All limp within 1 s. Supply current 0.</td>
+<td>Do not use the robot until the switch is replaced.</td>
+</tr>
+<tr>
+<td>E6</td>
+<td>Weigh the whole robot with its pack.</td>
+<td>Grams</td>
+<td>1,300 g or less. <span class="pill tag">Measured in CAD</span> 1,253 g</td>
+<td>Heavier: tell me the figure. Joint loads rise with weight.</td>
+</tr>
+<tr>
+<td>E7</td>
+<td>Close the head shell. Camera, sound and motors holding for 20 minutes. Read <code>/sys/class/thermal/thermal_zone0/temp</code>.</td>
+<td>Brain temperature</td>
+<td>75 C or less (reads 75000)</td>
+<td>Fit the heatsink if not fitted. Then tell me.</td>
+</tr>
+<tr>
+<td>E8</td>
+<td>Shell closed, 5 m from the router, one wall between. <code>ping -c 500</code> the router.</td>
+<td>Lost pings</td>
+<td>Under 1%</td>
+<td>Tell me: an outside antenna is the fix.</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Stage F. Battery, then the floor</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>No.</th>
+<th>What to do</th>
+<th>What to measure</th>
+<th>Pass</th>
+<th>If it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F1</td>
+<td>Pack on the desk, not connected. Plug the alarm onto its small plug.</td>
+<td>Volts per cell. Which wire is plus.</td>
+<td>Each cell 3.3 to 4.2 V. Cells within 0.05 V of each other. Red is plus.</td>
+<td>Cells apart: balance charge first (F2). Never force a plug.</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>Charge as in the wiring page.</td>
+<td>End voltage. Temperature. Time.</td>
+<td>8.15 to 8.25 V. Cells within 0.03 V. Under 40 C. Under 4 hours.</td>
+<td>Stop. Do not use a pack that gets hot or will not balance.</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>Switch off. Fit the 7.5 A main fuse. Plug the pack in. Switch on. Repeat E1, E4 and E5 on the pack, still on the box.</td>
+<td>As before. <code>read</code> shows voltage at each motor.</td>
+<td>As before. No motor under 6.0 V.</td>
+<td>Power off. Check the main fuse and both belly connectors.</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>On the floor. Stand up from lying flat.</td>
+<td>Any motor that lets go</td>
+<td>Stands in 3 s. None lets go.</td>
+<td>Lower the body less far at the start. Tell me.</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>Stand still for 5 minutes.</td>
+<td>Sum of the motors' current readings. Hottest motor.</td>
+<td>Under 1.5 A. Under 45 C.</td>
+<td>Tell me.</td>
+</tr>
+<tr>
+<td>F6</td>
+<td>Walk for 1 minute, three times.</td>
+<td>Average of the summed current readings</td>
+<td>5.6 A or less</td>
+<td>Slow the gait. If still over, tell me (a pack with stronger cells is the fix).</td>
+</tr>
+<tr>
+<td>F7</td>
+<td>Walk for 10 minutes.</td>
+<td>Hottest motor. Pack, switch, fuse holders and first lead of each leg, with the infrared thermometer.</td>
+<td>Motors 55 C or less. Everything else 50 C or less.</td>
+<td>Hot motor: keep each foot within 30 mm of its hip. Hot lead: 2 A chain fuses. Hot pack: tell me.</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>Start at 6.8 V. Walk 60 s.</td>
+<td>Lowest motor voltage. Does the brain stay up.</td>
+<td>5.9 V or more. No restart.</td>
+<td>Raise the software stop voltage by 0.2 V.</td>
+</tr>
+<tr>
+<td>F9</td>
+<td>Run the pack down on the box.</td>
+<td>Voltage when the software sits the robot down. Alarm.</td>
+<td>Sits down at 6.6 V. Alarm sounds at 3.3 V per cell.</td>
+<td>Fix the software limit before any more floor use.</td>
+</tr>
+<tr>
+<td>F10</td>
+<td>Just charged. Lift the robot 2 cm and let it drop onto its feet, five times. Push each leg by hand.</td>
+<td>Highest motor voltage</td>
+<td>8.4 V or less</td>
+<td>Charge to 4.05 V per cell. Add two more capacitors (spare ports on G3 and P3).</td>
+</tr>
+<tr>
+<td>F11</td>
+<td>Stand. Press down on the body until it sinks.</td>
+<td>How far a leg gives under 1 kg</td>
+<td>Note the figure, d. Allowed drop height = 15 x d until tested.</td>
+<td>No fail. This sets the drop limit.</td>
+</tr>
+<tr>
+<td>F12</td>
+<td>Push a standing foot sideways on your real floor.</td>
+<td>Does the foot slip or come off its peg</td>
+<td>Does not come off. Slips only above a firm push.</td>
+<td>Came off: glue the foot. Slips: tell me (softer plastic or a rubber sole).</td>
+</tr>
+<tr>
+<td>F13</td>
+<td>After the first hour of running: check every screw you can reach.</td>
+<td>Loose screws</td>
+<td>None</td>
+<td>Tighten a quarter turn. A screw that spins has stripped: tell me.</td>
+</tr>
+<tr>
+<td>F14</td>
+<td>Say 20 test phrases at 1 m, standing still, then while the legs move.</td>
+<td>Phrases your speech software understands</td>
+<td>18 of 20 still. 15 of 20 moving.</td>
+<td>Foam ring round each microphone. Then tell me.</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="view" id="view-open" data-view="open" aria-labelledby="tab-open">
+<h1>Not proven yet</h1>
+<p>A computer checked the shapes, the sums and the parts' data sheets. It cannot print, plug or switch on. Everything below is still open. Each line names the test that closes it.</p>
+<h2>Could stop the build (find out first, they are cheap)</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>What is not known</th>
+<th>Why it matters</th>
+<th>Closed by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Do printed parts fit the real motor</td>
+<td>All fits are drawn from Feetech's model with 0.25 mm of room. Your printer decides</td>
+<td>A1, A2, A3</td>
+</tr>
+<tr>
+<td>How high the motor plug stands</td>
+<td>There are 3.0 mm under each fork arm. No maker gives the plug's height. If it stands proud, every fork needs a cut-out</td>
+<td>A4</td>
+</tr>
+<tr>
+<td>Are the horn holes plain or threaded</td>
+<td>Decides which 120 fork screws to buy. 1.6 mm suits both</td>
+<td>A5</td>
+</tr>
+<tr>
+<td>How thick the motor lead's wires are</td>
+<td>Decides 3 A or 2 A chain fuses</td>
+<td>A7</td>
+</tr>
+<tr>
+<td>Which outer wire of the plug is data</td>
+<td>Feetech names the pins but not the side</td>
+<td>B4</td>
+</tr>
+<tr>
+<td>Does the tool talk to a real motor</td>
+<td><code>servo_tool.py</code> was tested on a software model of the motor bus, built from Feetech's published addresses. Not on a motor</td>
+<td>B4 to B8</td>
+</tr>
+<tr>
+<td>Does the motor's own current limit let go in time</td>
+<td>Taken from another open robot with this motor, not from Feetech</td>
+<td>B7</td>
+</tr>
+<tr>
+<td>Does the idler horn stay on with its centre screw out</td>
+<td>Needed to slide a fork on</td>
+<td>Step 9. If not: spread the fork arms 0.4 mm by hand instead</td>
+</tr>
+<tr>
+<td>Is the brain in stock</td>
+<td>Sold out at the two sellers I could read on 18 Nov 2026</td>
+<td>Look before stage 3</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Could make it work badly (found once it is built)</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>What is not known</th>
+<th>Closed by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lead slack in a real leg</td>
+<td>C2</td>
+</tr>
+<tr>
+<td>Motor data timing over USB on the brain, 50 times a second</td>
+<td>D8</td>
+</tr>
+<tr>
+<td>This exact system image with the camera, sound card and sensor</td>
+<td>D1 to D4</td>
+</tr>
+<tr>
+<td>Current on the brain's one USB port with the speaker loud</td>
+<td>D5</td>
+</tr>
+<tr>
+<td>Whether 1 GB of memory is enough</td>
+<td>D7</td>
+</tr>
+<tr>
+<td>Real weight. Wiring, switch and fuse holders are guessed at 1,253 g in all</td>
+<td>E6</td>
+</tr>
+<tr>
+<td>Brain heat in the closed shell</td>
+<td>E7</td>
+</tr>
+<tr>
+<td>Wifi inside the shell</td>
+<td>E8</td>
+</tr>
+<tr>
+<td><strong>Motor heat when walking.</strong> Two-leg loads reach 5.9 kg cm against a 3.7 rating</td>
+<td>F5, F6, F7</td>
+</tr>
+<tr>
+<td>Pack heat and run time</td>
+<td>F6, F7</td>
+</tr>
+<tr>
+<td>Voltage spikes on a full pack</td>
+<td>F10</td>
+</tr>
+<tr>
+<td>How hard a landing the legs take</td>
+<td>F11</td>
+</tr>
+<tr>
+<td>Grip of the feet on your floor</td>
+<td>F12</td>
+</tr>
+<tr>
+<td>Whether screws stay tight</td>
+<td>F13</td>
+</tr>
+<tr>
+<td>Hearing with motors running</td>
+<td>F14</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Drawn from a guess, not from a data sheet</h2>
+<p>These parts have no maker drawing I could open. Each is drawn at a likely size and has room to spare, but measure when it arrives.</p>
+<ul>
+<li><strong>Where the USB sockets and the ribbon socket sit on the brain.</strong> The camera ribbon's path is about 130 mm against a 150 mm ribbon. If it does not reach with slack, buy a 300 mm "Pi Zero" camera ribbon.</li>
+<li><strong>Sound card:</strong> size, where its microphone is, and its speaker plug (I assumed a 2 mm 2-pin plug).</li>
+<li><strong>Speaker depth</strong> against its 6 mm seat in the shell.</li>
+<li><strong>Fuse holders, switch body, low-battery alarm, USB-C plug length.</strong></li>
+<li><strong>The pack's plug:</strong> which half of the XT30 pair it carries. That is why you buy a mating pair.</li>
+<li><strong>Motor stall torque at 7.4 V.</strong> 15 kg cm is a reseller's figure. Feetech's own page gives 10 kg cm at 6 V.</li>
+<li><strong>Prices marked "Estimate"</strong> in the shopping list, and shipping and import duty.</li>
+</ul>
+<h2>Not part of this job</h2>
+<ul>
+<li>The walking software. Before any floor test your program needs: a stop at 6.6 V, a low torque limit while falling, and a watchdog that lets the motors go if commands stop for a quarter of a second.</li>
+<li>A robot description file and measured motor data for training. Test E6 gives the masses.</li>
+<li>Plastic creep over months. No usable numbers exist.</li>
+</ul>
+<h2>Decisions that are yours</h2>
+<ol>
+<li><strong>Cost.</strong> About $1,380 on the shopping list, plus $60 to $220 shipping and duty, against a $500 target for parts. Parts alone are about $745.</li>
+<li><strong>The switch.</strong> A small metal toggle on the back of the head replaces the rocker. It is the cheapest switch I found with a real battery rating and screw terminals. It is the one change you can see.</li>
+<li><strong>Charging.</strong> The pack comes out to charge on a $40 charger. Safer, but four screws each time.</li>
+<li><strong>Brain.</strong> 1 GB as asked. If only the 2 GB board can be bought, it fits the same posts for $7 more.</li>
+<li><strong>Stance.</strong> If test F7 shows hot motors, the fix is feet 12 mm closer in. That changes the look and six poses, so I did not do it.</li>
+<li><strong>Motors.</strong> I priced them at $29 each from a seller I could read. Feetech's own Alibaba store may sell a set of 15 for much less.</li>
+</ol>
+</section>
+</main>
+<footer class="foot">Designed and checked on a computer. Not printed, wired or switched on yet: every check a computer cannot do is a numbered step in the test plan.</footer>
+<script>
+(function () {
+  var views = Array.prototype.slice.call(document.querySelectorAll('.view'));
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  function show() {
+    var want = (location.hash || '#start').slice(1);
+    var target = document.getElementById(want);
+    var inView = target ? target.closest('.view') : null;
+    var vid = inView ? inView.dataset.view : want;
+    if (!views.some(function (v) { return v.dataset.view === vid; })) vid = 'start';
+    views.forEach(function (v) { v.hidden = v.dataset.view !== vid; });
+    tabs.forEach(function (t) { var on = t.dataset.view === vid; t.classList.toggle('on', on); if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
+    if (inView && target && target !== inView) target.scrollIntoView(); else window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', show); show();
+})();
+</script>
+</body>
+</html>
