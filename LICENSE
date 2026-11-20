@@ -1,9 +1,9 @@
-Cybi uses three licenses, one for each kind of file:
+Scorbi uses three licenses, one for each kind of file:
 
   Hardware design (cad/, scorpion/)          CERN-OHL-S-2.0   LICENSES/CERN-OHL-S-2.0.txt
   Software (build_model.py, check_model.py)  Apache-2.0       LICENSES/Apache-2.0.txt
   Documentation (build-pack/, README.md)     CC-BY-4.0        LICENSES/CC-BY-4.0.txt
 
-Copyright 2026 the Cybi authors.
+Copyright 2026 the Scorbi authors.
 
-The name Cybi is not covered by these licenses.
+The name Scorbi is not covered by these licenses.

@@ -1,6 +1,6 @@
-# Cybi
+# Scorbi
 
-Cybi is an open-source robot: a small scorpion spider with four legs, an arm and a claw, moved by 15 Feetech servos. Its hardware design, simulation model and build guide are all here, under open licenses.
+Scorbi is an open-source robot: a small scorpion spider with four legs, an arm and a claw, moved by 15 Feetech servos. Its hardware design, simulation model and build guide are all here, under open licenses.
 
 It is not built yet. Nothing has been printed, wired or switched on. You can try it in a physics simulation at [myautonomylab.com](https://www.myautonomylab.com).
 
@@ -35,7 +35,7 @@ Don't build v0.4 from the files here. Wait for the v0.5 CAD.
 
 If you make and share a changed version of the hardware, CERN-OHL-S asks you to share your changed design files under the same license.
 
-The name Cybi is not covered by these licenses.
+The name Scorbi is not covered by these licenses.
 
 ## Rebuild after a CAD change
 
