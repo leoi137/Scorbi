@@ -160,9 +160,11 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
 
     renders = []
     for rel in in_drive:
-        found = re.fullmatch(r"scorbi/previews/iter(\d+)_([a-z_]+?)_seed(\d+)_([a-z]+)\.mp4", rel)
+        found = re.fullmatch(r"scorbi/previews/iter(\d+)_([a-z0-9_]+?)_seed(\d+)_([a-z]+)\.mp4", rel)
         if found and found.group(4) in CAMERAS:
-            renders.append({"@run": run, "@checkpoint": int(found.group(1)), "@episode": ["seeds", found.group(2), int(found.group(3))], "camera": CAMERAS[found.group(4)], "kind": "preview", "@file": path_of(rel)})
+            cell = found.group(2)
+            batch = "extra" if re.search(r"_(ball|shoved)_\d+$", cell) else "seeds"  # the ball and the shove ladder are stored as 'extra'
+            renders.append({"@run": run, "@checkpoint": int(found.group(1)), "@episode": [batch, cell, int(found.group(3))], "camera": CAMERAS[found.group(4)], "kind": "preview", "@file": path_of(rel)})
     return {"training_runs": [run_row], "training_files": files, "training_iterations": iterations, "training_checkpoints": checkpoints,
             "training_episodes": episodes, "training_moments": moments, "training_renders": renders}
 
