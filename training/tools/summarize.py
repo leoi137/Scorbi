@@ -14,6 +14,8 @@ Reads each run's eval/ folder (written by evaluate.py). Needs numpy. Columns:
   steps/s     lift-offs per foot per second on the forward commands
   lift mm     how high a swinging foot is above its resting height, 90th percentile, forward 0.12 m/s (100 Hz recordings)
   swing s     how long a foot stays in the air per step, median, forward 0.12 m/s (50 Hz contacts; the scripted gait's is 0.2 s)
+  3+ down     share of time with three or more feet on the floor, forward commands (low = it walks on two feet)
+  bounce      the body_bounce term on forward 0.12 m/s; stand Nm = the hardest-working motor's mean torque when told to stand (everyday rating 0.36)
   tilt        largest tilt on the walking commands, degrees
   stand drift median drift over 20 s when told to stand, mm
 """
@@ -80,6 +82,8 @@ for folder in args:
         "at_limit_median": st.median(x["share_of_time_at_limit_max"] for x in eps),
         "torque_mean_max_median_n_m": st.median(max(x["torque_mean_n_m"][:12]) for x in eps),
         "gait": e["gait"], "lift_offs_per_foot_per_second": (e["gait_stats"] or {}).get("lift_offs_per_foot_per_second"),
+        "three_or_more_feet_down": (e["gait_stats"] or {}).get("share_of_time_three_or_more_feet_down"),
+        "stand_torque_n_m": st.median(max(x["torque_mean_n_m"][:12]) for x in eps if x["cell"] == "stand"), "body_bounce_forward_top": measured.get("body_bounce"),
         "swing_lift_p90_mm": lift, "swing_seconds_median": swing, "largest_tilt_walking_deg": max(x["largest_tilt_deg"] for x in walking),
         "stand_drift_median_mm": st.median(x["drift_m"] for x in eps if x["cell"] == "stand") * 1000,
         "fail_labels": index[-1]["fail_labels"], "measured_forward_top": measured,
@@ -87,11 +91,11 @@ for folder in args:
         "training_falls": json.loads((run / "scorbi" / "finished.json").read_text()).get("falls"),
     })
 f = lambda v, w, p=2: (" " * (w - 1) + "-") if v is None else f"{v:>{w}.{p}f}"  # noqa: E731
-print(f"{'run':24} {'iter':>5} {'pass':>4} {'90% at':>6} {'fwd':>6} {'turn':>5} {'slow park':>9} {'flip':>5} {'red':>4} {'at-limit':>8} {'steps/s':>7} {'lift mm':>7} {'swing s':>7} {'tilt':>5} {'stand drift':>11}  gait, labels at the end")
+print(f"{'run':24} {'iter':>5} {'pass':>4} {'90% at':>6} {'fwd':>6} {'turn':>5} {'slow park':>9} {'flip':>5} {'red':>4} {'at-limit':>8} {'steps/s':>7} {'lift mm':>7} {'swing s':>7} {'3+ down':>7} {'bounce':>6} {'stand Nm':>8} {'tilt':>5} {'stand drift':>11}  gait, labels at the end")
 for r in rows:
     name = r["run"].split("_", 2)[-1]
     print(f"{name:24} {str(r['iteration']) + ('' if r['is_final_checkpoint'] else '*'):>5} {r['passed']:>4} {str(r['first_iteration_90_percent'] if r['first_iteration_90_percent'] is not None else '-'):>6} {f(r['forward_top_m_s'], 6, 3)} {f(r['turn_left_rad_s'], 5)} {f(r['forward_slow_parked'], 9)}"
-          f" {f(r['flip_rate'], 5)} {f(r['red_share'], 4)} {f(r['at_limit_median'], 8)} {f(r['lift_offs_per_foot_per_second'], 7, 1)} {f(r['swing_lift_p90_mm'], 7, 1)} {f(r['swing_seconds_median'], 7)} {f(r['largest_tilt_walking_deg'], 5, 1)}"
+          f" {f(r['flip_rate'], 5)} {f(r['red_share'], 4)} {f(r['at_limit_median'], 8)} {f(r['lift_offs_per_foot_per_second'], 7, 1)} {f(r['swing_lift_p90_mm'], 7, 1)} {f(r['swing_seconds_median'], 7)} {f(r['three_or_more_feet_down'], 7)} {f(r['body_bounce_forward_top'], 6, 3)} {f(r['stand_torque_n_m'], 8)} {f(r['largest_tilt_walking_deg'], 5, 1)}"
           f" {f(r['stand_drift_median_mm'], 11, 0)}  {r['gait']}, {r['fail_labels']}")
 if not all(r["is_final_checkpoint"] for r in rows):
     print("* not the run's final checkpoint: the evaluation or the copy is not finished")
