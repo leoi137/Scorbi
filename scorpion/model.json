@@ -182,7 +182,7 @@
     "damping": 0.05,
     "frictionloss": 0.02
   },
-  "mass": 1.253,
+  "mass": 1.2530000000000001,
   "feet": [
     "fl_foot",
     "fr_foot",

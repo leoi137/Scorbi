@@ -88,8 +88,9 @@ PACK_Z = Z_BELLY + WALL + 0.2    # underside of the pack, in the door's cradle
 TIE_BRIDGES = [(sx * 31.0, sy * 12.0) for sx in (1, -1) for sy in (1, -1)]   # belly floor: the main fuse is tied at the left, the alarm at the right
 SMILE = (0.0, 92.0, 10.0, 48.0, 1.6)   # centre x, centre z, radius, half angle, slot width
 
-def tub():
-    """Chassis. Rounded belly, four pads that seat the hip turn motors, 14 posts for the deck screws, open top. Prints belly down."""
+def tub(inside=True):
+    """Chassis. Rounded belly, four pads that seat the hip turn motors, 14 posts for the deck screws, open top. Prints belly down.
+    inside=False leaves out what the closed robot hides (posts, bars, tie bridges): a lighter mesh for the website."""
     h = Z_DECK - Z_BELLY
     outer = cut(chassis_block(0, h, TUB_CH, TUB_FR), *panel_cuts(0)).translate((0, 0, Z_BELLY))
     inner = cut(chassis_block(WALL, h, TUB_CH - WALL + WALL * SQ, TUB_FR - WALL, r=TUB_R - WALL), *panel_cuts(WALL)).translate((0, 0, Z_BELLY + WALL))
@@ -102,6 +103,9 @@ def tub():
         for y in (HOLE_X, -HOLE_X):
             tools.append(in_hip(sx, sy, cyl('z', -HOLE_TAIL, y, M2_CLEAR, Z_BELLY - 1, HIP_Z - FACE + 0.1)))
             tools.append(in_hip(sx, sy, cyl('z', -HOLE_TAIL, y, 2.3, Z_BELLY - 1, HIP_Z - FACE - 3.0)))                         # deep counterbore: 3 mm left under the motor, so an M2 x 6 goes 3.0 mm in
+    battery_opening = box(-BATT_OPEN[0], BATT_OPEN[0], -BATT_OPEN[1], BATT_OPEN[1], Z_BELLY - 1, Z_BELLY + WALL + 1)
+    if not inside:
+        return cut(union(shell, *adds).intersect(outer), *tools, battery_opening)
     for x, y in TUB_BOSS:
         adds.append(cyl('z', x, y, 3.5, Z_BELLY + 0.5, Z_DECK))
         tools.append(cyl('z', x, y, M25_PILOT, Z_DECK - 10, Z_DECK + 0.1))
@@ -122,11 +126,12 @@ def tub():
     for x, y in TIE_BRIDGES:                                                        # little bridges a cable tie passes under
         adds.append(box(x - 1.5, x + 1.5, y - 4.0, y + 4.0, zf - 0.1, zf + 3.0))
         tools.append(box(x - 1.6, x + 1.6, y - 2.2, y + 2.2, zf - 0.2, zf + 1.6))
-    tools.append(box(-BATT_OPEN[0], BATT_OPEN[0], -BATT_OPEN[1], BATT_OPEN[1], Z_BELLY - 1, Z_BELLY + WALL + 1))             # battery opening
+    tools.append(battery_opening)
     return cut(union(shell, *adds).intersect(outer), *tools)
 
-def deck():
-    """Flat plate over the chassis. Clamps the four hip turn motors from above and carries the electronics. Prints flat."""
+def deck(inside=True):
+    """Flat plate over the chassis. Clamps the four hip turn motors from above and carries the electronics. Prints flat.
+    inside=False is just the plate, as seen from outside the closed robot: a lighter mesh for the website."""
     z0, z1 = Z_DECK, Z_LIDBASE
     plate = cq.Workplane("XY").polyline(octagon()).close().extrude(z1 - z0).edges("|Z").fillet(TUB_R)
     plate = cut(plate, *panel_cuts(0)).translate((0, 0, z0))
@@ -135,6 +140,8 @@ def deck():
         tools.append(in_hip(sx, sy, box(PLUG_END, HEAD + 6, -MW / 2 - 4, MW / 2 + 4, z0 - 1, z1 + 1)))                       # keep clear of the idler horn, the fork and the two sockets on top of the motor
         for y in (HOLE_X, -HOLE_X):
             tools.append(in_hip(sx, sy, cyl('z', -HOLE_TAIL, y, M2_CLEAR, z0 - 1, z1 + 1)))                                 # M2 x 6 pan-head: 4.0 mm into the motor
+    if not inside:
+        return cut(plate, *tools)
     for x, y in TUB_BOSS:
         tools.append(cyl('z', x, y, M25_CLEAR, z0 - 1, z1 + 1))
     def post(x, y, r, h, pilot, r_top=None):

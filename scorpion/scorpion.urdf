@@ -7,7 +7,7 @@
   <material name="eye"><color rgba="0.06 0.07 0.08 1"/></material>
   <material name="motor"><color rgba="0.16 0.17 0.19 1"/></material>
   <link name="base">
-    <inertial><origin xyz="0.003116 -0.000024 0.016793" rpy="0 0 0"/><mass value="0.72396"/><inertia ixx="0.001615025" ixy="0.000065109" ixz="-0.000098361" iyy="0.001795633" iyz="-0.000008134" izz="0.002041949"/></inertial>
+    <inertial><origin xyz="0.003126 -0.000025 0.016796" rpy="0 0 0"/><mass value="0.72396"/><inertia ixx="0.001615070" ixy="0.000065108" ixz="-0.000098396" iyy="0.001795702" iyz="-0.000008134" izz="0.002042053"/></inertial>
     <visual><origin xyz="0 0 -0.063" rpy="0 0 -1.570796"/><geometry><mesh filename="meshes/tub.stl"/></geometry><material name="coral"/></visual>
     <visual><origin xyz="0 0 -0.063" rpy="0 0 -1.570796"/><geometry><mesh filename="meshes/battery_door.stl"/></geometry><material name="coral"/></visual>
     <visual><origin xyz="0 0 -0.063" rpy="0 0 -1.570796"/><geometry><mesh filename="meshes/deck.stl"/></geometry><material name="coral"/></visual>

@@ -41,6 +41,7 @@ from prim import Rz, T  # noqa: E402
 OUT = HERE / "scorpion"
 WEB = ROOT / "public" / "sim" / "robot"
 WEB_SKIP = {"hub_tray", "shelf"}  # shut inside the head shell: the website never shows them. Their mass stays in the model
+WEB_OUTSIDE = {"tub": lambda: B.tub(inside=False), "deck": lambda: B.deck(inside=False)}  # the website shows these from outside only
 HAS_WEB = WEB.parent.is_dir()  # true only inside the website's repository, where this repository is robot/
 
 MM = 0.001
@@ -230,7 +231,7 @@ def build():
         if part not in fine:
             solid = A.part(part)
             # coarse first: OpenCascade keeps a shape's finest mesh and would hand it back for the coarse one too
-            light[part] = tris_of(solid, 0.5) * MM
+            light[part] = tris_of(WEB_OUTSIDE[part]() if part in WEB_OUTSIDE else solid, 0.5) * MM
             t_mm = tris_of(solid, 0.15)
             fine[part] = t_mm * MM
             grams[part] = V.MASS["motor"] if kind == "motor" else printed_grams(t_mm, kind == "tpu", part)
