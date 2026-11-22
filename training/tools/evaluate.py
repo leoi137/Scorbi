@@ -130,6 +130,9 @@ env_cfg.events.reset_robot_joints.params["position_range"] = (0.0, 0.0)
 for name, event in list(vars(env_cfg.events).items()):  # no random shoves and no randomised robot: the nominal one
     if getattr(event, "mode", None) in ("interval", "startup"):
         setattr(env_cfg.events, name, None)
+action_cfg = env_cfg.actions.joint_pos  # and nothing between the policy and the servos: no arm moves, hand-offs, delay or zero offset
+if hasattr(action_cfg, "handoff_every_s"):
+    action_cfg.arm_poses, action_cfg.handoff_every_s, action_cfg.delay_steps, action_cfg.zero_offset = None, 0.0, 0, 0.0
 env_cfg.commands.base_velocity.resampling_time_range = (1.0e6, 1.0e6)
 env_cfg.commands.base_velocity.rel_standing_envs = 0.0
 # A fall does not end the episode here. It is timed with the task's own rule instead (below).
