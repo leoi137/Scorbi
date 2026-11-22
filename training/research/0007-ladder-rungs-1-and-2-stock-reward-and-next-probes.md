@@ -1,6 +1,6 @@
 # 0007 · Rungs 1 and 2, the stock reward, and predictions for the long-steps and disturbance probes
 
-22 November 2026, 07:36 UTC. GPU hours used so far: about 6.2. Written before `ladder1_steps_s1` and the
+22 November 2026, 07:34 UTC. GPU hours used so far: about 6.2. Written before `ladder1_steps_s1` and the
 `walk_g*` runs start; rungs 3 to 6 and the linear-velocity probe are still running.
 
 ## Correction to 0006: baseline seed 3

@@ -6,6 +6,7 @@
 Needs mujoco, numpy and ffmpeg. Works on a machine with no GPU.
 """
 import argparse
+import math
 import json
 import pathlib
 import subprocess
@@ -47,6 +48,9 @@ def studio() -> mujoco.MjModel:
     m.vis.headlight.diffuse[:] = 0.0  # a light on the camera would make the floor's colour depend on the camera
     m.vis.headlight.specular[:] = 0.0
     m.vis.quality.shadowsize = 8192
+    # The shadow map must reach past everything in view: at the default (1 m) the floor a metre from the
+    # camera's target is speckled with dots.
+    m.vis.map.shadowclip = 3.0
     m.vis.quality.offsamples = 8
     m.vis.rgba.fog[:] = (*CREAM, 1.0)
     m.vis.map.fogstart, m.vis.map.fogend = 1.5, 5.0
@@ -102,6 +106,21 @@ first = int(args.start * rate)
 last = min(int((args.end if args.end is not None else len(pos) / rate) * rate), len(pos) - 1)
 look = np.array([pos[first, 0], pos[first, 1], 0.06])  # the camera starts on the robot, wherever the clip starts
 cam.lookat[:] = look
+if not follows:
+    # A camera that stays put must hold the whole clip: aim at the middle of the robot's path and
+    # stand back until every point of the path, plus the robot's own width, is inside the frame.
+    path = np.column_stack([pos[first : last + 1, :2], np.full(last + 1 - first, 0.06)])
+    look[:2] = (path[:, :2].min(axis=0) + path[:, :2].max(axis=0)) / 2
+    cam.lookat[:] = look
+    az, el = math.radians(cam.azimuth), math.radians(cam.elevation)
+    forward = np.array([math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el)])
+    right = np.array([math.sin(az), -math.cos(az), 0.0])
+    half_width = math.tan(math.radians(m.vis.global_.fovy) / 2) * width / height
+    while cam.distance < 6.0:
+        seen = path - (look - cam.distance * forward)
+        if np.all(np.abs(seen @ right) + 0.20 <= 0.9 * half_width * (seen @ forward)):
+            break
+        cam.distance += 0.05
 frames = [min(first + int(round(k * rate / args.fps)), last) for k in range(int((last - first) / rate * args.fps) + 1)]
 if args.still is not None:
     t = min(int(args.still * rate), len(pos) - 1)
