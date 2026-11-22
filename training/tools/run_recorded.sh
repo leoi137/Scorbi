@@ -4,7 +4,9 @@
 # Writes /workspace/logs/NAME.*.log and, when everything is done, <run>/scorbi/eval_done.json.
 set -u
 NAME=$1; TASK=$2; SEED=$3; ITERS=$4; META=$5; DETAIL=${6:-0,5,20,50,100,200,300,400,last}
-T=/workspace/Scorbi/training/tools; L=/workspace/logs
+# SCORBI_CODE names another checkout to run from (default /workspace/Scorbi), so new code can run beside a queue that uses the old.
+CODE=${SCORBI_CODE:-/workspace/Scorbi}; T=$CODE/training/tools; L=/workspace/logs
+export PYTHONPATH=$CODE/training${PYTHONPATH:+:$PYTHONPATH}
 cd /workspace/isaaclab
 SCORBI_RUN_META="$META" uv run python $T/train.py --task "$TASK" --seed "$SEED" --max_iterations "$ITERS" --run_name "$NAME" > $L/$NAME.train.log 2>&1
 echo "EXIT $?" >> $L/$NAME.train.log

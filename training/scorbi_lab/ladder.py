@@ -81,6 +81,19 @@ def step_time(env, command_name: str = "base_velocity", sensor_cfg: SceneEntityC
     return torch.sum(air * landed, dim=1) * moving
 
 
+def long_steps(env, command_name: str = "base_velocity", sensor_cfg: SceneEntityCfg = FEET_SENSOR, shortest: float = 0.1, target: float = 0.2) -> torch.Tensor:
+    """Paid at each touchdown for how much longer than 0.1 s the foot was in the air, up to the scripted gait's 0.2 s.
+
+    A swing shorter than 0.1 s costs; one of 0.2 s or more pays 0.1. Nothing when told to stand.
+    Unlike `step_time`, the same time in the air pays more as few long swings than as many short ones.
+    """
+    sensor = env.scene.sensors[sensor_cfg.name]
+    landed = sensor.compute_first_contact(env.step_dt).torch[:, sensor_cfg.body_ids]
+    air = sensor.data.last_air_time.torch[:, sensor_cfg.body_ids].clamp(max=target) - shortest
+    moving = env.command_manager.get_command(command_name).abs().sum(dim=1) > 1e-6
+    return torch.sum(air * landed, dim=1) * moving
+
+
 # name, function, weight. The order is the ladder's.
 LADDER = [
     ("action_rate", action_rate, -0.05),
@@ -90,7 +103,10 @@ LADDER = [
     ("body_bounce", body_bounce, -2.0),
     ("fidget_at_rest", fidget_at_rest, -0.2),
 ]
-EXTRA = [("step_time", step_time, 2.0)]  # not on the plan's ladder; measured, and a probe if the steps stay too quick
+# Not on the plan's ladder; measured on every run. long_steps is the probe for steps that stay too quick (research 0007).
+# The reward manager multiplies by the 0.02 s step, so 25 pays 0.5 for each second a swing lasts beyond 0.1 s:
+# 0.4 a second for the scripted gait (two 0.2 s swings a second per foot), nothing for the 0.1 s patter.
+EXTRA = [("step_time", step_time, 2.0), ("long_steps", long_steps, 25.0)]
 
 _resolved: set[int] = set()
 
@@ -142,6 +158,13 @@ class Ladder6RewardsCfg(Ladder5RewardsCfg):
 
 
 @configclass
+class Ladder1StepsRewardsCfg(Ladder1RewardsCfg):
+    """Rung 1 plus the long-steps term: a probe aimed at the quick patter rungs 1 and 2 still walk with."""
+
+    long_steps = RewTerm(func=long_steps, weight=EXTRA[1][2], params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")})
+
+
+@configclass
 class Ladder1EnvCfg(ScorbiFlatEnvCfg):
     rewards: Ladder1RewardsCfg = Ladder1RewardsCfg()
 
@@ -169,3 +192,8 @@ class Ladder5EnvCfg(ScorbiFlatEnvCfg):
 @configclass
 class Ladder6EnvCfg(ScorbiFlatEnvCfg):
     rewards: Ladder6RewardsCfg = Ladder6RewardsCfg()
+
+
+@configclass
+class Ladder1StepsEnvCfg(ScorbiFlatEnvCfg):
+    rewards: Ladder1StepsRewardsCfg = Ladder1StepsRewardsCfg()
