@@ -26,3 +26,9 @@ def blow_up(env, max_height: float = 1.0, asset_cfg: SceneEntityCfg = SceneEntit
     pos = data.root_link_pos_w.torch
     height = pos[:, 2] - env.scene.env_origins[:, 2]
     return ~torch.isfinite(pos).all(dim=1) | ~torch.isfinite(data.joint_pos.torch).all(dim=1) | (height > max_height)
+
+
+def tall(env, stand_height: float = 0.0717, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Paid for how high the body is above the floor, in standing heights: 1.0 when it stands. Nothing else is paid."""
+    height = env.scene[asset_cfg.name].data.root_link_pos_w.torch[:, 2] - env.scene.env_origins[:, 2]
+    return torch.nan_to_num(height / stand_height, nan=0.0, posinf=0.0, neginf=0.0).clamp(min=0.0)

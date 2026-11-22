@@ -13,6 +13,7 @@ from isaaclab.utils.noise import UniformNoiseCfg as Unoise
 import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .env_cfg import TRAIN_RANGES, ObservationsCfg, ScorbiFlatEnvCfg
+from .rewards import tall
 
 
 @configclass
@@ -62,3 +63,15 @@ class LinVelObservationsCfg(ObservationsCfg):
 @configclass
 class ScorbiFlatLinVelEnvCfg(ScorbiFlatEnvCfg):
     observations: LinVelObservationsCfg = LinVelObservationsCfg()
+
+
+@configclass
+class TallRewardsCfg:
+    """Account 1's What If no. 1: paid only for being tall. The commands are still given; nothing pays for following them."""
+
+    tall = RewTerm(func=tall, weight=1.5)
+
+
+@configclass
+class ScorbiFlatTallEnvCfg(ScorbiFlatEnvCfg):
+    rewards: TallRewardsCfg = TallRewardsCfg()

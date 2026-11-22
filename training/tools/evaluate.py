@@ -262,7 +262,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
 
         alive = torch.ones(N, dtype=torch.bool, device=device)
         s = {k: z(N) for k in ("fell_step", "fall_tilt", "fall_height", "fall_gx", "limit_legs", "over15", "over15_at_fall", "measured", "parked",
-                               "tilt_alive", "tilt_settled", "tilt_all", "height_min", "height_max", "vz_max", "spin_steps", "w_peak", "v_peak",
+                               "tilt_alive", "tilt_settled", "tilt_all", "height_min", "height_max", "height_sum", "vz_max", "spin_steps", "w_peak", "v_peak",
                                "spin_left", "spin_right", "glitch_step", "turtle_steps", "post_touch", "post_progress", "flips", "joint_speed", "reward", "steps", "yaw_6s", "yaw_all")}
         s["height_min"] += 10.0
         fall_cause = z(N, dtype=torch.long)
@@ -339,6 +339,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                 fallen = ~alive
                 # while upright
                 s["tilt_alive"] = torch.where(still, torch.maximum(s["tilt_alive"], tilt), s["tilt_alive"])
+                s["height_sum"] += height * a
                 if t > 50:
                     vel_sum += v * still[:, None]
                     s["measured"] += still
@@ -475,6 +476,8 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                 "largest_tilt_deg": math.degrees(float(n["tilt_alive"][i])),
                 "largest_tilt_whole_episode_deg": math.degrees(float(n["tilt_all"][i])),
                 "lowest_height_m": float(n["height_min"][i]) if measured[i] > 0 else None,
+                "mean_height_m": float(n["height_sum"][i] / steps_alive[i]),
+                "highest_height_whole_episode_m": float(n["height_max"][i]),
                 "along_command_10s_m": float(along_10s[i]),
                 "turned_6s_rad": float(n["yaw_6s"][i]),
                 "drift_m": float(drift[i]),

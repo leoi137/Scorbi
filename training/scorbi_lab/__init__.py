@@ -15,6 +15,7 @@ gym.register(
 
 # Probes: one thing changed each (variants.py).
 _VARIANTS = [("Scorbi-Velocity-Flat-StockReward", "variants:ScorbiFlatStockRewardEnvCfg"), ("Scorbi-Velocity-Flat-LinVel", "variants:ScorbiFlatLinVelEnvCfg")]
+_VARIANTS += [("Scorbi-Velocity-Flat-Tall", "variants:ScorbiFlatTallEnvCfg")]  # a What If: paid only for being tall
 # The reward ladder: rung n has the first n terms of ladder.LADDER on top of tracking (ladder.py).
 _VARIANTS += [(f"Scorbi-Velocity-Flat-Ladder{n}", f"ladder:Ladder{n}EnvCfg") for n in range(1, 7)]
 for _id, _cfg in _VARIANTS:
