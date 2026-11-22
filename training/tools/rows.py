@@ -136,8 +136,11 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
     for folder, e in evals.items():
         m = e["meta"]
         n, batch = m["iteration"], m["batch"]
-        if n not in saved or batch not in ("seeds", "noise", "do_nothing", "swarm", "extra"):
+        if n not in saved or batch not in ("seeds", "noise", "do_nothing", "swarm", "extra", "ball"):
             continue
+        # The table knows five batches. The ball episodes (skill 5) are stored as 'extra', like the shove ladder:
+        # their cells are named forward_ball_400 and so on, their moments are tagged 'ball', and setup.ball has the ball.
+        tag, batch = batch, "extra" if batch == "ball" else batch
         poses = path_of(f"scorbi/eval/{folder}/poses.npz")
         detail_rel = f"scorbi/eval/{folder}/detail.npz"
         for ep in e["episodes"]:
@@ -145,14 +148,14 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
             row |= {"@run": run, "@checkpoint": n, "batch": batch, "@poses_file": poses, "poses_index": ep["index"], "terrain_type": "flat", "terrain_level": None,
                     "numbers": lean({k: v for k, v in ep.items() if k not in EPISODE_COLUMNS and k not in ("index", "command", "skill", "torque_peak_n_m", "torque_mean_n_m")}
                                     | {"torque_peak_max_n_m": max(ep["torque_peak_n_m"][:12]), "torque_mean_max_n_m": max(ep["torque_mean_n_m"][:12])}),
-                    "setup": {"command": ep["command"], "noise_std": m["noise_std"], "skill": ep.get("skill")}}
+                    "setup": {"command": ep["command"], "noise_std": m["noise_std"], "skill": ep.get("skill")} | ({"ball": m["ball"]} if m.get("ball") else {})}
             episodes.append(row)
         for mo in e["moments"]:
             detail = mo.get("detail_index") is not None and detail_rel in in_drive
             label = f"{mo['fail_label']}" if mo.get("fail_label") else "clean"
             moments.append({"@run": run, "@checkpoint": n, "@episode": [batch, mo["cell"], mo["seed"]], "start_seconds": mo["start_seconds"], "end_seconds": mo["end_seconds"],
                             "kind": mo["kind"], "description": f"{mo['cell']}, seed {mo['seed']}, iteration {n}: {label}" + (f" ({mo['note']})" if mo.get("note") else ""),
-                            "tags": [t for t in (mo["cell"], mo.get("fail_label"), batch) if t],
+                            "tags": [t for t in (mo["cell"], mo.get("fail_label"), tag) if t],
                             "@states_file": path_of(detail_rel) if detail else None, "states_index": mo["detail_index"] if detail else None})
 
     renders = []
