@@ -19,7 +19,7 @@ _VARIANTS += [("Scorbi-Velocity-Flat-Tall", "variants:ScorbiFlatTallEnvCfg")]  #
 # The reward ladder: rung n has the first n terms of ladder.LADDER on top of tracking (ladder.py).
 _VARIANTS += [(f"Scorbi-Velocity-Flat-Ladder{n}", f"ladder:Ladder{n}EnvCfg") for n in range(1, 7)]
 _VARIANTS += [("Scorbi-Velocity-Flat-Ladder1-Steps", "ladder:Ladder1StepsEnvCfg")]  # rung 1 + long steps
-_VARIANTS += [(f"Scorbi-Velocity-Flat-Ladder2-{n}", f"ladder:Ladder2{n}EnvCfg") for n in ("Drag", "Bounce", "Fidget")]  # rung 2 + one of rungs 4 to 6
+_VARIANTS += [(f"Scorbi-Velocity-Flat-Ladder2-{n}", f"ladder:Ladder2{n}EnvCfg") for n in ("Drag", "Bounce", "Fidget", "Paired")]  # rung 2 + one of rungs 4 to 6
 # The production walk: the chosen recipe with the first n disturbance groups on (production.py).
 _VARIANTS += [(f"Scorbi-Velocity-Flat-Walk-G{n}", f"production:WalkG{n}EnvCfg") for n in range(0, 9)]
 for _id, _cfg in _VARIANTS:

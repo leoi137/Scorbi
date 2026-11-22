@@ -94,6 +94,21 @@ def long_steps(env, command_name: str = "base_velocity", sensor_cfg: SceneEntity
     return torch.sum(air * landed, dim=1) * moving
 
 
+def paired_steps(env, command_name: str = "base_velocity", sensor_cfg: SceneEntityCfg = FEET_SENSOR, shortest: float = 0.1, target: float = 0.2) -> torch.Tensor:
+    """`long_steps`, paid only when the foot stood on the floor at least as long as it then swung.
+
+    `long_steps` alone was won by hopping: 0.2 s in the air and 0.06 s on the floor (research 0009).
+    A swing that follows a shorter stance pays nothing here, so the longest-paying gait is the scripted
+    one: 0.2 s down, 0.2 s up.
+    """
+    sensor = env.scene.sensors[sensor_cfg.name]
+    landed = sensor.compute_first_contact(env.step_dt).torch[:, sensor_cfg.body_ids]
+    air = sensor.data.last_air_time.torch[:, sensor_cfg.body_ids]
+    stood = sensor.data.last_contact_time.torch[:, sensor_cfg.body_ids] >= air.clamp(max=target)
+    moving = env.command_manager.get_command(command_name).abs().sum(dim=1) > 1e-6
+    return torch.sum((air.clamp(max=target) - shortest) * landed * stood, dim=1) * moving
+
+
 # name, function, weight. The order is the ladder's.
 LADDER = [
     ("action_rate", action_rate, -0.05),
@@ -106,7 +121,8 @@ LADDER = [
 # Not on the plan's ladder; measured on every run. long_steps is the probe for steps that stay too quick (research 0007).
 # The reward manager multiplies by the 0.02 s step, so 25 pays 0.5 for each second a swing lasts beyond 0.1 s:
 # 0.4 a second for the scripted gait (two 0.2 s swings a second per foot), nothing for the 0.1 s patter.
-EXTRA = [("step_time", step_time, 2.0), ("long_steps", long_steps, 25.0)]
+# paired_steps at 15 pays 0.3 a second for the scripted gait (each foot 0.2 s down, 0.2 s up).
+EXTRA = [("step_time", step_time, 2.0), ("long_steps", long_steps, 25.0), ("paired_steps", paired_steps, 15.0)]
 
 _resolved: set[int] = set()
 
@@ -181,6 +197,11 @@ class Ladder2FidgetRewardsCfg(Ladder2RewardsCfg):
 
 
 @configclass
+class Ladder2PairedRewardsCfg(Ladder2RewardsCfg):
+    paired_steps = RewTerm(func=paired_steps, weight=EXTRA[2][2], params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")})
+
+
+@configclass
 class Ladder1EnvCfg(ScorbiFlatEnvCfg):
     rewards: Ladder1RewardsCfg = Ladder1RewardsCfg()
 
@@ -228,3 +249,8 @@ class Ladder2BounceEnvCfg(ScorbiFlatEnvCfg):
 @configclass
 class Ladder2FidgetEnvCfg(ScorbiFlatEnvCfg):
     rewards: Ladder2FidgetRewardsCfg = Ladder2FidgetRewardsCfg()
+
+
+@configclass
+class Ladder2PairedEnvCfg(ScorbiFlatEnvCfg):
+    rewards: Ladder2PairedRewardsCfg = Ladder2PairedRewardsCfg()
