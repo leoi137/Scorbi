@@ -97,11 +97,11 @@ renderer.scene.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = False
 cam = mujoco.MjvCamera()
 distance, azimuth, elevation, follows = CAMERAS[args.camera]
 cam.distance, cam.azimuth, cam.elevation = distance, azimuth, elevation
-look = np.array([pos[0, 0], pos[0, 1], 0.06])
-cam.lookat[:] = look
 
 first = int(args.start * rate)
 last = min(int((args.end if args.end is not None else len(pos) / rate) * rate), len(pos) - 1)
+look = np.array([pos[first, 0], pos[first, 1], 0.06])  # the camera starts on the robot, wherever the clip starts
+cam.lookat[:] = look
 frames = [min(first + int(round(k * rate / args.fps)), last) for k in range(int((last - first) / rate * args.fps) + 1)]
 if args.still is not None:
     t = min(int(args.still * rate), len(pos) - 1)
