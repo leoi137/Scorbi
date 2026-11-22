@@ -137,6 +137,7 @@ _learn = OnPolicyRunner.learn
 
 def learn(self: OnPolicyRunner, num_learning_iterations: int, init_at_random_ep_len: bool = False) -> None:
     import scorbi_lab.robot  # noqa: F401
+    from scorbi_lab import ladder
 
     out = os.path.join(self.logger.log_dir, "scorbi")
     os.makedirs(out, exist_ok=True)
@@ -171,6 +172,7 @@ def learn(self: OnPolicyRunner, num_learning_iterations: int, init_at_random_ep_
             "reward_terms": {k.split("/", 1)[1]: v for k, v in log.items() if k.startswith("Episode_Reward/")},
             "termination_rates": {k.split("/", 1)[1]: v for k, v in log.items() if k.startswith("Episode_Termination/")},
             "metrics": {k.split("/", 1)[1]: v for k, v in log.items() if k.startswith("Metrics/")},
+            "measured_terms": {k.split("/", 1)[1]: v for k, v in log.items() if k.startswith("Measured/")},
             "env_steps_total": totals["env_steps"],
             "episodes_total": totals["episodes"],
             "sim_seconds_total": totals["env_steps"] * dt,
@@ -207,6 +209,8 @@ def learn(self: OnPolicyRunner, num_learning_iterations: int, init_at_random_ep_
         it_steps += 1
         for k, v in extras.get("log", {}).items():
             it_sums[k] = it_sums.get(k, 0.0) + float(v)
+        for k, v in ladder.measure(u).items():  # every ladder term, rewarded or not: its mean over the robots
+            it_sums["Measured/" + k] = it_sums.get("Measured/" + k, 0.0) + float(torch.nan_to_num(v).mean())
         return obs, rewards, dones, extras
 
     logger_log = self.logger.log

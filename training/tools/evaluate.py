@@ -49,6 +49,7 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper  # noqa: E402
 from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli  # noqa: E402
 
 import scorbi_lab  # noqa: E402,F401
+from scorbi_lab import ladder  # noqa: E402
 from scorbi_lab.robot import FEET, JOINTS, LEG_JOINTS, MODEL, MOTOR  # noqa: E402
 
 SECONDS = 20.0
@@ -266,6 +267,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
         s["height_min"] += 10.0
         fall_cause = z(N, dtype=torch.long)
         vel_sum, reward_terms = z(N, 3), z(N, R)
+        measured_terms: dict[str, torch.Tensor] = {}
         torque_peak, torque_sum, at_limit = z(N, len(JOINTS)), z(N, len(JOINTS)), z(N, len(JOINTS))
         noise = torch.Generator(device=device).manual_seed(iteration * 7919 + 1)
         previous = z(N, 12)
@@ -313,6 +315,8 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                 a = alive.float()
                 s["reward"] += rew * a
                 s["steps"] += a
+                for k, value in ladder.measure(u).items():
+                    measured_terms[k] = measured_terms.get(k, 0.0) + clean(value) * a
                 reward_terms += clean(u.reward_manager._step_reward) * u.step_dt * a[:, None]  # weight x value x dt, as in the reward
                 torque = clean(robot.actuators.applied_effort.torch[:, order]).abs()
                 torque_peak = torch.maximum(torque_peak, torque * a[:, None])
@@ -382,6 +386,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
         flip_rate = n["flips"] / steps_alive
         joint_speed = n["joint_speed"] / steps_alive
         terms = reward_terms.cpu().numpy()
+        measured_np = {k: v.cpu().numpy() / steps_alive for k, v in measured_terms.items()}
         drift = np.linalg.norm(pos[-1, :, :2] - pos[0, :, :2], axis=1)
         along_10s = ((pos[500, :, :2] - pos[0, :, :2]) * planar.cpu().numpy()).sum(1)
         cause = fall_cause.cpu().numpy()
@@ -477,6 +482,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                 "action_flip_rate": float(flip_rate[i]),
                 "reward": float(n["reward"][i]),
                 "reward_terms": {k: float(terms[i, j]) for j, k in enumerate(reward_names)},
+                "measured_terms": {k: float(v[i]) for k, v in measured_np.items()},
                 "motor_mark": mark,
                 "torque_peak_n_m": [round(float(x), 4) for x in peak[i]],
                 "torque_mean_n_m": [round(float(x), 4) for x in mean_torque[i]],
@@ -568,7 +574,9 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
             summary.append({"cell": name, "skill": skill, "episodes": len(rows), "passed": sum(e["success"] for e in rows), "falls": sum(e["fell"] for e in rows),
                             "forward_m_s": mean("forward_m_s"), "sideways_m_s": mean("sideways_m_s"), "turn_rad_s": mean("turn_rad_s"),
                             "parked_share": sum(park) / len(park) if park else None, "largest_tilt_deg": max(e["largest_tilt_deg"] for e in rows),
-                            "reward": sum(e["reward"] for e in rows) / len(rows), "motor_marks": {m: sum(e["motor_mark"] == m for e in rows) for m in ("green", "amber", "red")},
+                            "reward": sum(e["reward"] for e in rows) / len(rows),
+                            "measured_terms": {k: sum(e["measured_terms"][k] for e in rows) / len(rows) for k in rows[0]["measured_terms"]},
+                            "motor_marks": {m: sum(e["motor_mark"] == m for e in rows) for m in ("green", "amber", "red")},
                             "fail_labels": {k: sum(e["fail_label"] == k for e in rows) for k in sorted({e["fail_label"] for e in rows if e["fail_label"]})}})
         meta = {
             "task": TASK, "run": os.path.basename(run), "iteration": iteration, "batch": batch or "seeds",
@@ -585,6 +593,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                       "note": "Account 1's tests ask for 5 body lengths in 10 s, which is 0.15 m/s; the website's top speed is 0.12 m/s. `along_command_10s_m` and `turned_6s_rad` give the numbers for those tests."},
             "motor_mark": {"limit_n_m": MOTOR["effort"], "rated_n_m": RATED_TORQUE, "red": "a joint within 2% of the limit for over 5% of the time upright", "amber": "average above rated, or peak over 80% of the limit"},
             "parked": "share of time, after the first second, moving at under 20% of a commanded speed",
+            "measured_terms": "every reward-ladder term (scorbi_lab/ladder.py), unweighted, averaged over the time upright, whether or not this run was rewarded for it",
             "torque_order": JOINTS,
             "stepping": "the 4 physics steps of each control step run one by one" if detail else "as in training",
             "wall_seconds": wall, "cells": [c[0] for c in cells], "detail": detail_meta,
