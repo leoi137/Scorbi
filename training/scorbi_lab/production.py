@@ -18,9 +18,10 @@ from isaaclab.utils import configclass
 import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .env_cfg import EventsCfg, ScorbiFlatEnvCfg
-from .ladder import Ladder1RewardsCfg
+from .ladder import Ladder1RewardsCfg, Ladder2RewardsCfg
 
-# The reward recipe chosen in block D. Until block D is read this is rung 1, a placeholder.
+# The group probes (Walk-G1 to G8) were queued while block D was undecided and keep rung 1's reward,
+# so that they stay comparable with each other. The production run has the chosen recipe (below).
 RecipeRewardsCfg = Ladder1RewardsCfg
 
 # The order the groups are added in: the plan's.
@@ -180,4 +181,17 @@ class WalkG7EnvCfg(WalkEnvCfg):
 
 @configclass
 class WalkG8EnvCfg(WalkEnvCfg):
+    disturbances: int = 8
+
+
+# ── the production run (block E) ──────────────────────────────────────────
+# The recipe chosen in block D (research 0010): rung 2. Tracking, action change, a price on falling, leg torque.
+ProductionRewardsCfg = Ladder2RewardsCfg
+
+
+@configclass
+class ProductionEnvCfg(WalkEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Production``: the chosen recipe with the disturbance groups that passed their probes."""
+
+    rewards: ProductionRewardsCfg = ProductionRewardsCfg()
     disturbances: int = 8
