@@ -23,7 +23,7 @@ def mesh_of(shape, tol, ang):
 def one(wp): return wp.val() if len(wp.vals()) == 1 else cq.Compound.makeCompound(wp.vals())
 
 meshes = {}
-PRINTED = ['tub', 'battery_door', 'deck', 'lid', 'shoulder_mount', 'hip', 'thigh', 'shin', 'foot', 'upper_arm', 'forearm', 'palm_cap', 'finger', 'eye']
+PRINTED = ['tub', 'battery_door', 'deck', 'hub_tray', 'shelf', 'lid', 'shoulder_mount', 'hip', 'thigh', 'shin', 'foot', 'upper_arm', 'forearm', 'palm_cap', 'finger', 'eye']
 for n in PRINTED:
     fine = n in ('eye', 'foot', 'lid')
     meshes[n] = mesh_of(one(part(n)), 0.12 if fine else 0.25, 0.3 if fine else 0.5); print(n, meshes[n]['n_tris'])
@@ -65,8 +65,8 @@ scene = dict(
     instances=[dict(name=n, part=pn, kind=k, rides_on=g, matrix=M(m)) for n, pn, k, g, m in instances(REST)],
     rest=dict(q={k: (list(map(float, v)) if isinstance(v, list) else float(v)) for k, v in REST.items()}),
     electronics=[dict(name=n, min=bb(s)[0], max=bb(s)[1]) for n, s in _electronics().items()],
-    deck_layout=dict(RADXA=B.RADXA, ADAPTER=B.ADAPTER, REG_B=B.REG_B, IMU=B.IMU, PASS=B.PASS, deck_top_z=Z_LIDBASE),
-    openings=dict(usb_c=dict(center=[0, -BODY_Y, B.CHG_Z + 3.25], half=[B.USBC[0], B.USBC[1]]), switch=dict(x=[B.SWITCH[0], B.SWITCH[1]], z=[B.SWITCH[2], B.SWITCH[3]], wall_y=-BODY_Y),
+    deck_layout=dict(RADXA=B.RADXA, ADAPTER=B.ADAPTER, REG_B=B.REG_B, IMU=B.IMU, PASS=B.PASS, HUB=B.HUB, hub_z=B.HUB_Z, shelf_z=B.SHELF_Z, deck_top_z=Z_LIDBASE),
+    openings=dict(switch=dict(center=[B.SWITCH[0], -BODY_Y, B.SWITCH[1]], r=B.SWITCH[2]),
                   speaker=dict(center=[0, -BODY_Y, B.SPK_Z]), camera=dict(center=[0, BODY_Y, CAM_Z]), battery_door=dict(half=list(B.BATT_OPEN), z=Z_BELLY)),
     poses={},
 )

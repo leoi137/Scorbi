@@ -73,7 +73,7 @@ def frames(q):
 def instances(q):
     """List of (instance name, part name, kind, group, 4x4). kind: 'print', 'motor' or 'bought'. group = rigid body it rides on."""
     f = frames(q); out = []
-    for n in ('tub', 'battery_door', 'deck', 'lid'):
+    for n in ('tub', 'battery_door', 'deck', 'hub_tray', 'shelf', 'lid'):
         out.append((n, n, 'print', 'body', f['body']))
     out.append(('shoulder_mount', 'shoulder_mount', 'print', 'body', f['shoulder_mount']))
     for s in (1, -1):
@@ -128,13 +128,18 @@ def overlap(sa, sb):
         if gap > 0.05: return 0.0
     return v
 
+def press_fit(na, nb):
+    """True for the one overlap that is meant: each foot's socket is FOOT_GRIP smaller than its shin's peg, so it stretches on."""
+    a, b = sorted((na, nb))
+    return a.startswith('foot') and b == 'shin' + a[4:]
+
 def clashes(ga, gb, tol=0.5):
     """Overlap volume (mm3) between every solid of group list ga and every solid of gb, above tol."""
     out = []
     for na, sa in ga:
         ba = _bb(sa)
         for nb, sb in gb:
-            if not _bb_hit(ba, _bb(sb)):
+            if not _bb_hit(ba, _bb(sb)) or press_fit(na, nb):
                 continue
             v = overlap(sa, sb)
             if v > tol or v < 0:
@@ -153,7 +158,7 @@ def write_stl(path, tris):
     n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0]); ln = np.linalg.norm(n, axis=1)
     keep = ln > 1e-9; t, n, ln = t[keep], n[keep], ln[keep]; n = n / ln[:, None]      # drop zero-area triangles (poles of revolved parts)
     with open(path, 'wb') as f:
-        f.write(b'scorpion spider v0.4'.ljust(80, b' ')); f.write(struct.pack('<I', len(t)))
+        f.write(b'scorpion spider v0.5'.ljust(80, b' ')); f.write(struct.pack('<I', len(t)))
         for i in range(len(t)):
             f.write(struct.pack('<12fH', *n[i], *t[i].reshape(-1), 0))
 

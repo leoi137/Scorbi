@@ -10,7 +10,7 @@ for nm in only:
     flat = [(n, s, _bb(s)) for grp in g.values() for n, s in grp]
     hits = []
     for (na, sa, ba), (nb, sb, bb_) in itertools.combinations(flat, 2):
-        if not _bb_hit(ba, bb_): continue
+        if not _bb_hit(ba, bb_) or press_fit(na, nb): continue
         v = overlap(sa, sb)
         if v > 0.5 or v < 0: hits.append((na, nb, round(v, 1)))
     # lowest point of anything but the feet, in the world

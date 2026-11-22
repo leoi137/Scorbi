@@ -7,7 +7,7 @@ g = world_solids(q)
 flat = [(n, s) for grp in g.values() for n, s in grp]
 t = time.time(); hits = []
 for (na, sa), (nb, sb) in itertools.combinations(flat, 2):
-    if not _bb_hit(_bb(sa), _bb(sb)): continue
+    if not _bb_hit(_bb(sa), _bb(sb)) or press_fit(na, nb): continue
     try: v = vol(sa.intersect(sb))
     except Exception as e: v = -1
     if v > 0.5 or v < 0: hits.append((na, nb, round(v, 1)))

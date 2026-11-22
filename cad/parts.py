@@ -1,7 +1,11 @@
-"""Scorpion spider v0.4 (pillow, Feetech motors): printable parts, built around real components. Millimetres.
+"""Scorpion spider v0.5 (pillow, Feetech motors): printable parts, built around real components. Millimetres.
 
 Robot frame: X = right, Y = forward, Z = up, origin on the floor under the middle of the body (standing).
 Every part function returns a solid in that part's own frame; assembly.py places them.
+
+v0.5 is v0.4 with the fixes from the v0.5 build pack (build-pack/, "Findings"): every sliding fit 0.25 mm or more,
+pocket walls 2.35 mm, fork screw seats 0.6 mm higher, flat-head screws sunk flush under the shoulder motor,
+a tighter foot socket, and a test piece to check the fits before anything else is printed.
 """
 import math
 from prim import *
@@ -24,15 +28,23 @@ WIRE_W = 6.0                     # width of the wire channels cut in the idler-s
 PLUG_END = PLUG_Y0 - 0.65        # -14.4: an idler-side cheek must stop here, so both sockets stay open
 
 # ------------------------------------------------------------------ printed-joint standards
-ARM_IN = FACE + HORN_T + 0.1     # 14.6: inner face of a fork arm (0.1 clear of horn and idler faces)
+# A printer is accurate to about 0.2 mm, so no sliding fit is tighter than CLR. Check them on the test piece first.
+CLR = 0.25                       # room round a motor in its pocket, and between a fork arm and its horn
+ARM_IN = FACE + HORN_T + CLR     # 14.75: inner face of a fork arm. Across both horns is 29.0 mm, the gap 29.5
 ARM_T = 3.0                      # ROBOTIS: M2x6 tapping screw through a 3 mm plate into the horn
-ARM_OUT = ARM_IN + ARM_T         # 17.6
+ARM_OUT = ARM_IN + ARM_T         # 17.75
+SEAT_UP = 0.6                    # each fork screw seats this far out from the arm: pulled tight onto the horn, an M2 x 6 then ends 0.6 mm short of the case
 DISC_R = 9.5                     # fork arm disc around the shaft
 WEB_R, WEB_T = 16.0, 3.5         # fork web: inner radius clears the case corner (13.8), thickness
-CHK_IN, CHK_OUT = FACE + 0.15, 14.5   # cradle cheek: 0.15 clear of the case face, flush under the fork-arm layer
+CHK_IN = FACE + CLR              # 11.75: inner face of a pocket wall (cheek). The motor is 23.0 mm, the gap 23.5
+CHK_T = 2.35                     # pocket wall: thin enough that a fork arm pulled tight onto its horn (14.5) still clears it by 0.40
+CHK_OUT = CHK_IN + CHK_T         # 14.10
+POCKET = MW / 2 + CLR            # 10.25: pocket floor and roof, from the motor's middle
 M2_CLEAR = 1.15                  # radius of a clearance hole for an M2 tapping screw
-CSK_R, CSK_H = 1.95, 0.85        # countersink for a flat-head M2 (3.8 head)
+M2_PILOT = 0.85                  # radius of the hole an M2 tapping screw cuts its thread into
+CSK_R, CSK_H = 1.95, 0.85        # countersink for a flat-head M2 (3.8 head). An M2 x 5 flat-head through a pocket wall goes 2.4 mm into the case
 M25_PILOT, M25_CLEAR = 1.05, 1.4 # M2.5 self-tapping into plastic: pilot and clearance radius
+CSK25_R = 2.45                   # countersink for a flat-head M2.5 (4.7 head)
 CENTER_R = 3.75                  # centre hole in a fork arm: the horn's 5 mm screw head passes through
 LENS_H = 2.0                     # every fork arm disc is domed outward by this much: a round button over the joint
 CBORE_R = 2.25                   # pocket in the dome so the screw head still seats on the 3 mm plate
@@ -93,15 +105,18 @@ def arm_holes(axis, a=0.0, b=0.0):
     """Tools: four M2 clearance holes on the horn circle plus the centre hole, through both fork arms and their domes.
     Each screw hole has a pocket through the dome so the head seats on the 3 mm plate."""
     top = ARM_OUT + LENS_H + 1
-    tools = [cyl(axis, a, b, CENTER_R, -top, top), cyl(axis, a, b, CENTER_R + 0.55, ARM_OUT, top), cyl(axis, a, b, CENTER_R + 0.55, -top, -ARM_OUT)]   # wider through the dome, so it merges with the screw pockets
+    seat = ARM_OUT + SEAT_UP
+    tools = [cyl(axis, a, b, CENTER_R, -top, top), cyl(axis, a, b, CENTER_R + 0.55, seat, top), cyl(axis, a, b, CENTER_R + 0.55, -top, -seat)]   # wider through the dome, so it merges with the screw pockets
     for k in range(4):
         x, y = a + PCD_R * math.cos(k * math.pi / 2), b + PCD_R * math.sin(k * math.pi / 2)
-        tools += [cyl(axis, x, y, M2_CLEAR, -top, top), cyl(axis, x, y, CBORE_R, ARM_OUT, top), cyl(axis, x, y, CBORE_R, -top, -ARM_OUT)]
+        tools += [cyl(axis, x, y, M2_CLEAR, -top, top), cyl(axis, x, y, CBORE_R, seat, top), cyl(axis, x, y, CBORE_R, -top, -seat)]
     return tools
 
 def arm_domes(axis, a=0.0, b=0.0):
-    """The two shallow domes on the outer faces of a fork's arms."""
-    return [lens(axis, a, b, ARM_OUT, 1, DISC_R - 0.4, LENS_H), lens(axis, a, b, -ARM_OUT, -1, DISC_R - 0.4, LENS_H)]
+    """The two shallow domes on the outer faces of a fork's arms, each on a SEAT_UP disc that carries the screw seats."""
+    r = DISC_R - 0.4
+    return [cyl(axis, a, b, r, ARM_OUT - 0.1, ARM_OUT + SEAT_UP), lens(axis, a, b, ARM_OUT + SEAT_UP, 1, r, LENS_H - SEAT_UP),
+            cyl(axis, a, b, r, -ARM_OUT - SEAT_UP, -ARM_OUT + 0.1), lens(axis, a, b, -ARM_OUT - SEAT_UP, -1, r, LENS_H - SEAT_UP)]
 
 def cheek_hole(axis, a, b, outer, sign):
     """Tools: an M2 clearance hole with a countersink on the outer face of a cheek. 'outer' is the face position, sign its side."""
@@ -141,10 +156,10 @@ def link(L, floor=1, bulge=4.0, roof=None):
     p += arm_domes('y')
     p.append(box(WEB_R, WEB_R + WEB_T, -ARM_OUT, ARM_OUT, -10, 9))               # web, full width
     p.append(box(WEB_R, WEB_R + WEB_T, -CHK_OUT, CHK_OUT, 9, 12.6))              # web, up to the floor
-    p.append(box(WEB_R, L - 11, -CHK_OUT, CHK_OUT, 10.2, 12.6))                  # floor of the pocket
+    p.append(box(WEB_R, L - 11, -CHK_OUT, CHK_OUT, POCKET, 12.6))                # floor of the pocket
     p.append(arch('x', CHK_OUT, 12.55, bulge, WEB_R, L - 11))                     # rounded back
     if roof:
-        p.append(box(roof[0], rx1, -CHK_OUT, CHK_OUT, -12.6, -10.2))          # roof
+        p.append(box(roof[0], rx1, -CHK_OUT, CHK_OUT, -12.6, -POCKET))        # roof
         p.append(arch('x', CHK_OUT, 12.55, roof[1], roof[0], rx1).mirror("XY"))
     body = union(*p)
     tools = arm_holes('y')
@@ -154,7 +169,7 @@ def link(L, floor=1, bulge=4.0, roof=None):
     tools.append(box(WEB_R - 0.1, WEB_R + WEB_T + 0.1, -5, 5, -8, -1))            # cable slot through the web
     tools += idler_cheek_cuts(L)
     if roof and rx1 < L - 11 - 0.1:                                               # a cover that stops short starts at 45 degrees, so it prints on end
-        tools.append(cq.Workplane("XZ").polyline([(rx1 + 0.1, -10.2), (rx1 + 0.1, -20.0), (rx1 - 9.7, -20.0)]).close().extrude(2 * CHK_OUT + 2).translate((0, CHK_OUT + 1, 0)))
+        tools.append(cq.Workplane("XZ").polyline([(rx1 + 0.1, -POCKET), (rx1 + 0.1, -20.0), (rx1 - 9.75, -20.0)]).close().extrude(2 * CHK_OUT + 2).translate((0, CHK_OUT + 1, 0)))
     out = cut(body, *tools)
     return out if floor > 0 else out.mirror("XY")
 
@@ -202,13 +217,15 @@ def shin():
     return cut(union(*p), *arm_holes('y'))
 
 PEG = 9.0                        # side of the square foot peg
+FOOT_GRIP = 0.1                  # the foot's socket is this much smaller than the peg on each side: it stretches on
 GUS = 6.0                        # size of the gussets under the shin's bridge
 
 def foot():
     """Soft foot (print in TPU). Ball centre at the origin; pushes onto the shin peg from -x. Prints flat face down."""
     R, k = FOOT_R, math.sqrt(0.5)
     s = cq.Workplane("XY").moveTo(-7, 0).lineTo(-7, R).lineTo(0, R).threePointArc((R * k, R * k), (R, 0)).close().revolve(360, (0, 0, 0), (1, 0, 0))
-    return s.cut(box(-8, 2.2, -PEG / 2 - 0.1, PEG / 2 + 0.1, -PEG / 2 - 0.1, PEG / 2 + 0.1))
+    g = PEG / 2 - FOOT_GRIP
+    return s.cut(box(-8, 2.2, -g, g, -g, g))
 
 def hip():
     """Hip bracket. Fork on the turn motor (axis = z at the origin), pocket for the lift motor hanging tail-down at x = COXA.
@@ -220,10 +237,10 @@ def hip():
         c0, c1 = sorted((s * CHK_IN, s * CHK_OUT))
         p.append(box(18.5, COXA + 10.3, c0, c1, -27, -11.5))                     # cheeks on the lift motor's tail
         r0, r1 = sorted((s * 8.6, s * CHK_IN))
-        p.append(box(18.5, COXA - 10.1, r0, r1, -24.7, -11.5))                   # ribs that seat the motor's back face
+        p.append(box(18.5, COXA - POCKET, r0, r1, -TAIL - CLR, -11.5))           # ribs that seat the motor's back face
     p += arm_domes('z')
     p.append(box(15, 18.5, -CHK_OUT, CHK_OUT, -27, ARM_OUT))                     # back web
-    p.append(box(18.5, COXA + 10.3, -CHK_OUT, CHK_OUT, -27, -24.7))              # floor under the tail
+    p.append(box(18.5, COXA + 10.3, -CHK_OUT, CHK_OUT, -27, -TAIL - CLR))        # floor under the tail
     body = union(*p)
     tools = arm_holes('z')
     for s in (1, -1):
@@ -267,8 +284,8 @@ def forearm():
     p += arm_domes('y')
     p.append(box(WEB_R, WEB_R + WEB_T, -ARM_OUT, ARM_OUT, zb, 9))                # web
     p.append(box(WEB_R, 64, -19, CLAW_Y + 12, zb, -CHK_IN))                      # bottom plate: neck and lower cheek
-    p.append(box(WEB_R, 64, CLAW_Y - 13.2, CLAW_Y - 10.2, zb, CHK_IN))           # spine along the motor
-    p.append(box(38, 50, CLAW_Y - 16.2, CLAW_Y - 10.2, zb, CHK_IN))              # boss for the palm cap screw
+    p.append(box(WEB_R, 64, CLAW_Y - POCKET - 3.0, CLAW_Y - POCKET, zb, CHK_IN)) # spine along the motor
+    p.append(box(38, 50, CLAW_Y - 16.2, CLAW_Y - POCKET, zb, CHK_IN))            # boss for the palm cap screw
     p.append(soft_prism([(56, -20), (92, -20), (121, -15.6), (120, -GRIP), (56, -GRIP)], zb, 8.0, r_side=2.0))   # chubby fixed finger
     body = union(*p)
     tools = arm_holes('y')
@@ -306,22 +323,23 @@ def shoulder_mount():
     """Rounded cowl on the roof. It holds the shoulder motor flat, tail to the rear; the motor slides in from the front.
     Frame: origin on the shoulder axis, robot axes. Prints base down: the rounded top bridges across."""
     zb = -(SH_Z - Z_TOP)                                                          # roof surface
-    p = [box(-22, 22, -31, -4, zb, -10.2), box(-12, 12, -5, 14.5, zb, -10.2)]
+    p = [box(-22, 22, -31, -4, zb, -POCKET), box(-12, 12, -5, 14.5, zb, -POCKET)]
     for s in (1, -1):
         c0, c1 = sorted((s * CHK_IN, s * CHK_OUT))
         p.append(box(c0, c1, -28.2, -11.5, zb, 12.6))
-    p.append(box(-CHK_OUT, CHK_OUT, -28.2, -24.7, zb, 12.6))                      # back wall
-    p.append(box(-CHK_OUT, CHK_OUT, -28.2, COWL_Y, 10.2, 12.6))                   # top over the motor's tail
+    p.append(box(-CHK_OUT, CHK_OUT, -28.2, -TAIL - CLR, zb, 12.6))                # back wall
+    p.append(box(-CHK_OUT, CHK_OUT, -28.2, COWL_Y, POCKET, 12.6))                 # top over the motor's tail
     p.append(arch('y', CHK_OUT, 12.55, 3.0, -28.2, COWL_Y))                       # rounded over
     body = union(*p)
     tools = []
     for s in (1, -1):
         for z in (HOLE_X, -HOLE_X):
             tools += cheek_hole('x', -HOLE_TAIL, z, s * CHK_OUT, s)
-    for x, y in SH_MOUNT:
-        tools.append(cyl('z', x, y, M25_CLEAR, zb - 0.1, -10.1))
+    for k, (x, y) in enumerate(SH_MOUNT):
+        tools.append(cyl('z', x, y, M25_CLEAR, zb - 0.1, -POCKET + 0.1))
+        if k >= 2:                                                                # the two front screws lie under the motor: flat heads, sunk flush
+            tools.append(cone('z', x, y, M25_CLEAR, CSK25_R, -POCKET - (CSK25_R - M25_CLEAR), -POCKET + 0.01))
     tools.append(box(-5, 5, -28.3, -24.6, -8.0, 6.0))                             # window in the back wall
     tools.append(box(-CHK_OUT - 0.1, -CHK_IN + 0.1, PLUG_END, -11.4, zb + 3.3, 12.7))                                   # the idler-side cheek stops short of the two sockets
     tools.append(box(-CHK_OUT - 0.1, -CHK_IN + 0.1, -28.3, PLUG_END + 0.1, -WIRE_W / 2, WIRE_W / 2))                    # wire channel along the cheek and out through the back, next to the roof's cable hole
     return cut(body, *tools)
-

@@ -2,7 +2,8 @@
 import os
 from prim import *
 from parts import *
-from body import RADXA, ADAPTER, REG_B, IMU, SPK_Z, CHG_Z, CHG_SIZE, PACK_Z
+from body import (RADXA, ADAPTER, REG_B, IMU, SPK_Z, PACK_Z, HUB, HUB_Z, HUB_BAY, HUB_T, HUB_FLOOR, WAGO,
+                  SHELF_Z, MIC, SWITCH, SWITCH_PANEL_Y)
 
 def motor():
     """Feetech HD-1910-C001 in its own frame: shaft along z, driven horn at +z, idler horn at -z, head end at +y.
@@ -25,28 +26,57 @@ def motor_real():
     if not os.path.exists(STEP_PATH): return None
     return cq.importers.importStep(STEP_PATH).translate((0, 0, 8.0))
 
-# masses in grams. Maker figures where they exist; the pack, protection board, charge board and bus adapter are typical values.
-MASS = dict(motor=21.0, cells=94.0, bms=5.0, radxa=13.0, hat=12.0, adapter=16.0, reg_b=2.6, imu=1.5, charger=5.0, camera=3.0, speaker=15.0, switch_fuse=6.0)
-CELL = (18.6, 65.2)              # one 18650: diameter, length (Molicel P28A)
-BMS = (36.0, 16.0, 3.4)          # 2S protection board lying on top of the cells: a typical size, check yours
+# The bought parts of v0.5 (build-pack/, shopping list and wiring page), in grams. Maker figures where they exist.
+# Sizes marked "guess" have no maker drawing; the build pack lists them under "Drawn from a guess".
+MASS = dict(motor=21.0, pack=108.0, radxa=16.0, adapter=16.0, reg_b=10.0, imu=1.5, camera=3.0, speaker=15.0,
+            sound_card=8.0, usb_hub=12.0, fuses=30.0, hub=30.0, switch=25.0, main_fuse=10.0, alarm=8.0)
+PACK = (38.0, 72.0, 19.5)        # ZOHD Lionpack 2S 3500 mAh: width, length, height. The bay takes up to 43 x 74 x 24
+REG_SIZE = (14.0, 42.0, 9.0)     # Hobbywing UBEC 3A with its leads' sleeves: across, along, height (guess)
+SWITCH_BODY = (16.6, 25.0, 22.0) # Cole Hersee 5582 behind the panel: across, depth, height, with its two screw terminals (guess)
 
 def electronics():
     """name -> solid in the robot frame."""
     zt = Z_LIDBASE
     e = {}
-    r = CELL[0] / 2
-    e['cells'] = union(cyl('y', -r - 0.2, PACK_Z + r, r, -CELL[1] / 2, CELL[1] / 2), cyl('y', r + 0.2, PACK_Z + r, r, -CELL[1] / 2, CELL[1] / 2))
-    e['bms'] = box(-BMS[0] / 2, BMS[0] / 2, -BMS[1] / 2, BMS[1] / 2, PACK_Z + CELL[0] + 0.3, PACK_Z + CELL[0] + 0.3 + BMS[2])
-    e['radxa'] = box(RADXA[0] - 32.5, RADXA[0] + 32.5, RADXA[1] - 15, RADXA[1] + 15, zt + 6.0, zt + 7.2)
-    e['hat'] = box(RADXA[0] - 32.5, RADXA[0] + 32.5, RADXA[1] - 15, RADXA[1] + 15, zt + 9.0, zt + 23.0)
-    e['adapter'] = box(ADAPTER[0] - 21, ADAPTER[0] + 21, ADAPTER[1] - 16.5, ADAPTER[1] + 16.5, zt + 3.0, zt + 18.5)      # Waveshare Bus Servo Adapter (A): 42 x 33, 18.5 tall with its jack
-    e['reg_b'] = box(REG_B[0] - 8.9, REG_B[0] + 8.9, REG_B[1] - 8.9, REG_B[1] + 8.9, zt, zt + 8.9)
-    e['imu'] = box(IMU[0] - 12.7, IMU[0] + 12.7, IMU[1] - 8.9, IMU[1] + 8.9, zt, zt + 4.6)                            # Adafruit LSM6DS3TR-C: 25.4 x 17.8
+    w, l, h = PACK
+    e['pack'] = box(-w / 2, w / 2, -l / 2, l / 2, PACK_Z, PACK_Z + h)
+    rb = zt + 4.0                                                                                       # Radxa Zero 3W on its 4 mm posts
+    e['radxa'] = union(box(RADXA[0] - 32.5, RADXA[0] + 32.5, RADXA[1] - 15, RADXA[1] + 15, rb, rb + 1.2),
+                       box(RADXA[0] - 7, RADXA[0] + 7, RADXA[1] - 4, RADXA[1] + 10, rb + 1.2, rb + 7.2),      # heatsink on the big chip
+                       box(RADXA[0] - 25.4, RADXA[0] + 25.4, RADXA[1] - 14.6, RADXA[1] - 9.5, rb + 1.2, rb + 9.7))   # 40-pin header along the back edge, with the Qwiic SHIM on pins 1 to 6
+    e['adapter'] = box(ADAPTER[0] - 21, ADAPTER[0] + 21, ADAPTER[1] - 16.5, ADAPTER[1] + 16.5, zt + 3.0, zt + 18.5)   # Waveshare Bus Servo Adapter (A): 42 x 33, 15.5 tall with its jack
+    a, b, c = REG_SIZE
+    e['reg_b'] = box(REG_B[0] - a / 2, REG_B[0] + a / 2, REG_B[1] - b / 2, REG_B[1] + b / 2, zt, zt + c)
+    e['imu'] = box(IMU[0] - 12.7, IMU[0] + 12.7, IMU[1] - 8.9, IMU[1] + 8.9, zt + 2.5, zt + 5.6)                     # Adafruit LSM6DS3TR-C: 25.4 x 17.8, on 2.5 mm posts
+    # hub tray: D1 and D2 (left bay), G1 to G3 (middle), P1, P2 and P3 (right), standing wire holes up; two 1000 uF capacitors over the G-P wall
+    bx, by = HUB_BAY
+    L = 3 * bx + 4 * HUB_T
+    zb = HUB_Z + HUB_FLOOR
+    blocks = []
+    for k, ways in enumerate(((5, 3), (5, 5, 5), (5, 5, 3))):
+        x0 = -L / 2 + HUB_T + k * (bx + HUB_T) + 0.3
+        y = HUB[1] - by / 2 + 0.3
+        for n in ways:
+            ww, tt, dd = WAGO[n]
+            blocks.append(box(x0, x0 + ww, y, y + tt, zb, zb + dd)); y += tt
+    xc = -L / 2 + 2 * bx + 2.5 * HUB_T
+    for dy in (-6.0, 6.0):
+        blocks.append(cyl('z', xc, HUB[1] + dy, 5.0, zb + 20.7, zb + 37.7))       # 10 x 17 mm, standing on their legs
+    e['hub'] = union(*blocks)
+    ys = HUB[1]                                                                                         # on the fuse shelf
+    zs = SHELF_Z + 2.0
+    e['usb_hub'] = box(-43.0, -13.0, 24.0, 52.0, zs, zs + 11.0)                                         # small USB-C hub (guess)
+    e['fuses'] = box(8.0, 48.0, 24.0, 52.0, zs, zs + 18.0)                                              # five chain fuse holders tied three under two (guess)
     yi = BODY_Y - LW
-    e['camera'] = union(box(-12.5, 12.5, yi - 6.7, yi - 5.7, CAM_Z - 9.5, CAM_Z + 14.5), box(-4.25, 4.25, yi - 5.7, yi - 0.2, CAM_Z - 4.25, CAM_Z + 4.25))   # OV5647 board, 25 x 24
-    yw = -BODY_Y + WALL                                                                                                 # inner face of the chassis back wall
-    e['charger'] = union(box(-CHG_SIZE[0] / 2, CHG_SIZE[0] / 2, yw + 0.3, yw + 0.3 + CHG_SIZE[1], CHG_Z, CHG_Z + 1.6),
-                         box(-4.5, 4.5, yw - 0.9, yw + 7.0, CHG_Z + 1.6, CHG_Z + 4.9))                                  # 2S USB-C charge board and its socket
+    e['camera'] = union(box(-12.5, 12.5, yi - 6.7, yi - 5.7, CAM_Z - 9.5, CAM_Z + 14.4), box(-4.25, 4.25, yi - 5.7, yi - 1.0, CAM_Z - 4.25, CAM_Z + 4.25))   # Raspberry Pi Camera V2, 25 x 23.9
     yb = -BODY_Y + LW
     e['speaker'] = cyl('y', 0, SPK_Z, 14.0, yb + 1.2, yb + 7.4)
+    zr = Z_TOP - ROOF
+    e['sound_card'] = box(-MIC[0] - 9.0, -MIC[0] + 9.0, MIC[1] - 20.0, MIC[1] + 20.0, zr - 8.0, zr - 0.5)   # USB sound card, taped under the left microphone holes (guess)
+    sw, sd, sh = SWITCH_BODY
+    e['switch'] = union(box(SWITCH[0] - sw / 2, SWITCH[0] + sw / 2, SWITCH_PANEL_Y, SWITCH_PANEL_Y + sd, SWITCH[1] - sh / 2, SWITCH[1] + sh / 2),
+                        cyl('y', SWITCH[0], SWITCH[1], 5.9, -BODY_Y - 4.0, SWITCH_PANEL_Y + 0.1))       # body inside against the boss, threaded neck through the wall
+    zf = Z_BELLY + WALL
+    e['main_fuse'] = box(-60.0, -36.0, -21.0, 21.0, zf, zf + 10.0)                                      # main fuse holder with BP1 and BP2, tied at the left of the belly
+    e['alarm'] = box(38.0, 58.0, -20.0, 20.0, zf, zf + 10.0)                                            # low-battery alarm, tied at the right of the belly
     return e
