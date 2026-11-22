@@ -87,6 +87,7 @@ parser.add_argument("--cells", default=None, help="a list of cells; default all 
 parser.add_argument("--noise_std", type=float, default=0.0, help="exploration noise on the actions; 0 = none")
 parser.add_argument("--do_nothing", action="store_true", help="the control arm: zero actions instead of the policy")
 parser.add_argument("--batch", default=None, help="folder suffix; default from the options")
+parser.add_argument("--shove_speeds", default=None, help="a shove ladder, such as 0.2,0.3,0.5 (m/s): only the two shoved commands, once per speed; batch 'extra'")
 parser.add_argument("--detail_at", default="first,last", help="iterations recorded in full detail: a list, first, last, all or none")
 parser.add_argument("--detail_seeds", type=int, default=4, help="clean seeds per cell kept in full detail at the first and last checkpoint; half as many at the others")
 parser.add_argument("--skip_done", action="store_true", help="skip checkpoints that already have episodes.json")
@@ -106,13 +107,16 @@ def listed(text: str) -> list[int]:
         return []
     if text == "all":
         return list(saved)
-    return sorted({saved[0] if p == "first" else saved[-1] if p == "last" else int(p) for p in text.split(",")})
+    return sorted({saved[0] if p == "first" else saved[-1] if p == "last" else int(p) for p in text.split(",")} & set(saved))  # unsaved iterations are dropped
 
 
 iterations = [0] if args.do_nothing else listed(args.iterations)
 detail_at = set(listed(args.detail_at)) & set(iterations)
-batch = args.batch or ("do_nothing" if args.do_nothing else "noise" if args.noise_std else "")
-cells = [c for c in CELLS if args.cells is None or c[0] in args.cells.split(",")]
+batch = args.batch or ("do_nothing" if args.do_nothing else "noise" if args.noise_std else "extra" if args.shove_speeds else "")
+# name, command, shove speed in m/s (0 = none), skill
+cells = [(name, cmd, SHOVE_SPEED if shoved else 0.0, skill) for name, cmd, shoved, skill in CELLS if args.cells is None or name in args.cells.split(",")]
+if args.shove_speeds:  # the same two shoved commands at harder shoves: forward_shoved_30 is 0.30 m/s
+    cells = [(f"{name}_{round(float(v) * 100):02d}", cmd, float(v), skill) for v in args.shove_speeds.split(",") for name, cmd, shoved, skill in CELLS if shoved]
 N = len(cells) * args.seeds
 STEPS = int(round(SECONDS / 0.02))
 ROWS = 2 * STEPS + 1
@@ -173,10 +177,11 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
     shove_angle = np.array([np.random.default_rng(2000 + s).uniform(0, 2 * math.pi) for s in seed_of])
     cmd_np = np.array([cells[c][1] for c in cell_of], dtype=np.float32)
     commands = torch.tensor(cmd_np, device=device)
-    shoved = torch.tensor([cells[c][2] for c in cell_of], device=device)
+    shove_speed = np.array([cells[c][2] for c in cell_of], dtype=np.float32)
+    shoved = torch.tensor(shove_speed > 0, device=device)
     moving_axis = commands.abs() > 1e-6
     planar = commands[:, :2] / commands[:, :2].norm(dim=1, keepdim=True).clamp(min=1e-9)
-    kick = torch.tensor(np.stack([np.cos(shove_angle), np.sin(shove_angle)], 1) * SHOVE_SPEED, dtype=torch.float32, device=device)
+    kick = torch.tensor(np.stack([np.cos(shove_angle), np.sin(shove_angle)], 1) * shove_speed[:, None], dtype=torch.float32, device=device)
     origin = u.scene.env_origins.clone()  # each robot's own patch of floor: z is then height above the floor
     limits = d.soft_joint_pos_limits.torch
     identity = d.default_root_pose.torch[0, 3:7].tolist()
@@ -291,8 +296,8 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                     if detail:
                         detail_buf[2 * (t - 1), :, col("shove")] = kick * shoved[:, None]
                     for i in torch.nonzero(shoved).flatten().tolist():
-                        pushes[i] = {"at_seconds": SHOVE_AT, "speed_change_m_s": SHOVE_SPEED, "direction": [float(np.cos(shove_angle[i])), float(np.sin(shove_angle[i])), 0.0],
-                                     "impulse_newton_seconds": SHOVE_SPEED * MODEL["mass"], "how": "a step change in the base's speed, in the world frame; no ball is simulated"}
+                        pushes[i] = {"at_seconds": SHOVE_AT, "speed_change_m_s": float(shove_speed[i]), "direction": [float(np.cos(shove_angle[i])), float(np.sin(shove_angle[i])), 0.0],
+                                     "impulse_newton_seconds": float(shove_speed[i]) * MODEL["mass"], "how": "a step change in the base's speed, in the world frame; no ball is simulated"}
                 hook["t"], hook["k"], hook["action"] = t, 0, actions
                 obs, rew, _, _ = env.step(actions)
                 term.vel_command_b[:] = commands

@@ -1,5 +1,5 @@
 #!/bin/bash
-# One recorded run on the GPU: train, then evaluate every saved checkpoint, the noise batch and the do-nothing control.
+# One recorded run on the GPU: train, then evaluate every saved checkpoint, the noise batch, the do-nothing control and the shove ladder.
 #   run_recorded.sh NAME TASK SEED ITERATIONS 'META JSON' [DETAIL_AT]
 # Writes /workspace/logs/NAME.*.log and, when everything is done, <run>/scorbi/eval_done.json.
 set -u
@@ -12,4 +12,6 @@ D=$(ls -d logs/rsl_rl/scorbi_flat/*_"$NAME" | tail -1)
 uv run python $T/evaluate.py --run "$D" --iterations all --detail_at "$DETAIL" --skip_done > $L/$NAME.eval.log 2>&1; A=$?
 uv run python $T/evaluate.py --run "$D" --iterations 0,last --noise_std 1.0 --seeds 8 --detail_at none > $L/$NAME.noise.log 2>&1; B=$?
 uv run python $T/evaluate.py --run "$D" --do_nothing --detail_at none > $L/$NAME.nothing.log 2>&1; C=$?
-echo "{\"run\": \"$(basename "$D")\", \"eval_exit\": $A, \"noise_exit\": $B, \"do_nothing_exit\": $C, \"finished_at\": \"$(date -u +%FT%TZ)\"}" > "$D/scorbi/eval_done.json"
+# The shove ladder: the two shoved commands at 0.5 to 2 m/s. Scorbi shrugs off anything under about 1 m/s (research 0006).
+uv run python $T/evaluate.py --run "$D" --iterations 0,50,100,200,last --shove_speeds 0.5,1.0,1.5,2.0 --detail_at last > $L/$NAME.shove.log 2>&1; S=$?
+echo "{\"run\": \"$(basename "$D")\", \"eval_exit\": $A, \"noise_exit\": $B, \"do_nothing_exit\": $C, \"shove_exit\": $S, \"finished_at\": \"$(date -u +%FT%TZ)\"}" > "$D/scorbi/eval_done.json"
