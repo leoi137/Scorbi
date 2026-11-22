@@ -18,7 +18,7 @@ from isaaclab.utils import configclass
 import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .env_cfg import EventsCfg, ScorbiFlatEnvCfg
-from .ladder import Ladder1RewardsCfg, Ladder2BounceRewardsCfg
+from .ladder import Ladder1RewardsCfg, Ladder2BounceRewardsCfg, Ladder2RewardsCfg
 
 # The group probes (Walk-G1 to G8) were queued while block D was undecided and keep rung 1's reward,
 # so that they stay comparable with each other. The production run has the chosen recipe (below).
@@ -195,4 +195,16 @@ class ProductionEnvCfg(WalkEnvCfg):
     """Task ``Scorbi-Velocity-Flat-Production``: the chosen recipe with the disturbance groups that passed their probes."""
 
     rewards: ProductionRewardsCfg = ProductionRewardsCfg()
+    disturbances: int = 8
+
+
+@configclass
+class ProductionPlainEnvCfg(WalkEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Production-Plain``: the same without the body-bounce term (rung 2 alone).
+
+    On the website's bumpy floor the bounce term stalled on four commands against two (research 0012): it steps
+    lower. This is the comparison run.
+    """
+
+    rewards: Ladder2RewardsCfg = Ladder2RewardsCfg()
     disturbances: int = 8

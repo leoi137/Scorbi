@@ -23,6 +23,7 @@ _VARIANTS += [(f"Scorbi-Velocity-Flat-Ladder2-{n}", f"ladder:Ladder2{n}EnvCfg") 
 # The production walk: the chosen recipe with the first n disturbance groups on (production.py).
 _VARIANTS += [(f"Scorbi-Velocity-Flat-Walk-G{n}", f"production:WalkG{n}EnvCfg") for n in range(0, 9)]
 _VARIANTS += [("Scorbi-Velocity-Flat-Production", "production:ProductionEnvCfg")]  # block E: the chosen recipe, every group that passed
+_VARIANTS += [("Scorbi-Velocity-Flat-Production-Plain", "production:ProductionPlainEnvCfg")]  # the comparison: rung 2 alone, every group
 for _id, _cfg in _VARIANTS:
     gym.register(
         id=_id,
