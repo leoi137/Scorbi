@@ -43,8 +43,8 @@
 0.002 s steps, the page's uneven floor, 8 seeds per command, the same starts as the training evaluation.
 
 - The reader matches the policy to 0.000002. 0 falls of 104. Every episode is green.
-- Speeds, website against training: forward 0.115 against 0.117 m/s, backward 0.091 against 0.098, turn 0.98
-  against 1.02 rad/s, curves and the diagonal within 8%.
+- Speeds, website against training: forward 0.115 against 0.117 m/s, backward 0.091 against 0.101, turn 0.98
+  against 1.02 rad/s, curves and the diagonal within 9%.
 - **Two commands still miss the plan's gate (parked share under 5%):** slow forward is parked 19% of the time
   (0.046 m/s at 0.06) and sideways-left 8% (0.057 m/s at 0.08). The tracking-only baseline missed on five (0006),
   with every episode red.
