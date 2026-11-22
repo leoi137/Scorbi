@@ -144,7 +144,7 @@ def learn(self: OnPolicyRunner, num_learning_iterations: int, init_at_random_ep_
     u = self.env.unwrapped
     n_envs, dt = u.num_envs, u.step_dt
     device = u.device
-    totals = {"env_steps": 0, "episodes": 0, "falls": 0}
+    totals = {"env_steps": 0, "episodes": 0, "falls": 0, "non_finite_rewards": 0}
     it_sums: dict[str, float] = {}
     it_steps = 0
     ep_return = torch.zeros(n_envs, device=device)
@@ -176,6 +176,7 @@ def learn(self: OnPolicyRunner, num_learning_iterations: int, init_at_random_ep_
             "sim_seconds_total": totals["env_steps"] * dt,
             "wall_seconds_total": time.time() - started,
             "falls_total": totals["falls"],
+            "non_finite_rewards_total": totals["non_finite_rewards"],
             "extras": extra,
         }) + "\n")
         rows.flush()
@@ -185,6 +186,10 @@ def learn(self: OnPolicyRunner, num_learning_iterations: int, init_at_random_ep_
     def step(actions):
         nonlocal it_steps, done_return, done_steps, done_count
         obs, rewards, dones, extras = env_step(actions)
+        bad = ~torch.isfinite(rewards)
+        if bad.any():  # a robot the simulator lost; it is reset by the blow_up termination. Counted, never hidden.
+            totals["non_finite_rewards"] += int(bad.sum())
+            rewards = torch.nan_to_num(rewards, nan=0.0, posinf=0.0, neginf=0.0)
         done = dones.bool()
         ep_return.add_(rewards)
         ep_steps.add_(1)

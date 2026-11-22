@@ -1,0 +1,15 @@
+#!/bin/bash
+# One recorded run on the GPU: train, then evaluate every saved checkpoint, the noise batch and the do-nothing control.
+#   run_recorded.sh NAME TASK SEED ITERATIONS 'META JSON' [DETAIL_AT]
+# Writes /workspace/logs/NAME.*.log and, when everything is done, <run>/scorbi/eval_done.json.
+set -u
+NAME=$1; TASK=$2; SEED=$3; ITERS=$4; META=$5; DETAIL=${6:-0,5,20,50,100,200,300,400,last}
+T=/workspace/Scorbi/training/tools; L=/workspace/logs
+cd /workspace/isaaclab
+SCORBI_RUN_META="$META" uv run python $T/train.py --task "$TASK" --seed "$SEED" --max_iterations "$ITERS" --run_name "$NAME" > $L/$NAME.train.log 2>&1
+echo "EXIT $?" >> $L/$NAME.train.log
+D=$(ls -d logs/rsl_rl/scorbi_flat/*_"$NAME" | tail -1)
+uv run python $T/evaluate.py --run "$D" --iterations all --detail_at "$DETAIL" --skip_done > $L/$NAME.eval.log 2>&1; A=$?
+uv run python $T/evaluate.py --run "$D" --iterations 0,last --noise_std 1.0 --seeds 8 --detail_at none > $L/$NAME.noise.log 2>&1; B=$?
+uv run python $T/evaluate.py --run "$D" --do_nothing --detail_at none > $L/$NAME.nothing.log 2>&1; C=$?
+echo "{\"run\": \"$(basename "$D")\", \"eval_exit\": $A, \"noise_exit\": $B, \"do_nothing_exit\": $C, \"finished_at\": \"$(date -u +%FT%TZ)\"}" > "$D/scorbi/eval_done.json"

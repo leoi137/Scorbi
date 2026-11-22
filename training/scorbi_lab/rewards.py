@@ -1,4 +1,4 @@
-"""Scorbi's own reward terms."""
+"""Scorbi's own reward and termination terms."""
 
 import torch
 
@@ -18,3 +18,11 @@ def track_twist_exp(env, command_name: str, lin_std: float, ang_std: float, asse
     lin = torch.sum(torch.square(command[:, :2] - asset.data.root_lin_vel_b.torch[:, :2]), dim=1)
     ang = torch.square(command[:, 2] - asset.data.root_ang_vel_b.torch[:, 2])
     return torch.exp(-lin / lin_std**2 - ang / ang_std**2)
+
+
+def blow_up(env, max_height: float = 1.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """True for a robot the simulator has lost: a state that is not a number, or a body a metre above the floor."""
+    data = env.scene[asset_cfg.name].data
+    pos = data.root_link_pos_w.torch
+    height = pos[:, 2] - env.scene.env_origins[:, 2]
+    return ~torch.isfinite(pos).all(dim=1) | ~torch.isfinite(data.joint_pos.torch).all(dim=1) | (height > max_height)

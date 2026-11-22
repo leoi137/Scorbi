@@ -28,7 +28,7 @@ import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .actions import LegActionWithScriptedArmCfg
 from .commands import ScorbiVelocityCommandCfg
-from .rewards import track_twist_exp
+from .rewards import blow_up, track_twist_exp
 from .robot import LEG_JOINTS, SCORBI_CFG
 
 # The website's command limits and what is trained (plan 2.6): a little wider, so the website
@@ -163,6 +163,8 @@ class TerminationsCfg:
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 0.5},
     )
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": math.radians(60.0)})
+    # A safety net, expected never to fire: a robot whose state is not a number, or that is a metre in the air.
+    blow_up = DoneTerm(func=blow_up)
 
 
 @configclass
@@ -170,8 +172,10 @@ class ScorbiFlatEnvCfg(ManagerBasedRLEnvCfg):
     sim: SimulationCfg = SimulationCfg(
         physics=NewtonCfg(
             solver_cfg=MJWarpSolverCfg(
-                njmax=100,
-                nconmax=40,
+                # Room for the body, arm and legs on the floor at once. At 100 and 40 a robot lying down
+                # overflowed the solver, was thrown into the air and went to NaN (research 0003).
+                njmax=800,
+                nconmax=250,
                 cone="pyramidal",
                 impratio=1.0,
                 integrator="implicitfast",
