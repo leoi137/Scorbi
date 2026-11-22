@@ -187,7 +187,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
             # numbers for robots that were alive during this step
             a = alive.float()
             reward += rew * a
-            reward_terms += u.reward_manager._step_reward * a[:, None]
+            reward_terms += u.reward_manager._step_reward * u.step_dt * a[:, None]  # weight x value x dt, as in the reward
             torque = robot.actuators.applied_effort.torch[:, order].abs()
             torque_peak = torch.maximum(torque_peak, torque * a[:, None])
             torque_sum += torque * a[:, None]

@@ -30,7 +30,7 @@ from scorbi_lab.robot import FEET, JOINTS, LEG_JOINTS, MODEL, MOTOR, STAND, STAN
 
 TASK = "Scorbi-Velocity-Flat"
 parser = argparse.ArgumentParser()
-parser.add_argument("--num_envs", type=int, default=16)
+parser.add_argument("--num_envs", type=int, default=1024)
 parser.add_argument("--json", default=None, help="write the measurements here")
 parser.add_argument("--trace", type=int, default=0, help="print robot 0 for this many control steps")
 add_launcher_args(parser)
@@ -61,6 +61,7 @@ env_cfg.scene.num_envs = args.num_envs
 # The reset events stay, with no scatter: they are what puts the robot in its initial state.
 env_cfg.events.reset_base.params["pose_range"] = {}
 env_cfg.events.reset_robot_joints.params["position_range"] = (0.0, 0.0)
+TASK_STANDING = env_cfg.commands.base_velocity.rel_standing_envs
 env_cfg.commands.base_velocity.rel_standing_envs = 1.0
 env_cfg.terminations.base_contact = None
 env_cfg.terminations.bad_orientation = None
@@ -162,6 +163,60 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
         check(bool((feet_force > 0.1).all()), f"{label}: a foot reports no contact force: {row['feet_force_n_mean']}")
         check(0.8 < row["feet_force_sum_over_weight"] < 1.2, f"{label}: feet carry {row['feet_force_sum_over_weight']:.2f} of the weight")
         check(math.isfinite(err) and err < 0.1, f"{label}: joints {err:.3f} rad from the stand")
+
+    # ── the command mix, and what a motionless robot earns from it ───────
+    # The robots are standing still on zero action. Give them the task's real commands and read the
+    # reward they are paid for doing nothing. Robots told to stand are left out: they earn honestly.
+    term = u.command_manager.get_term("base_velocity")
+    c = term.cfg
+    c.rel_standing_envs = TASK_STANDING
+    everyone = torch.arange(u.num_envs, device=u.device)
+    full = sum(u.reward_manager.get_term_cfg(n).weight for n in u.reward_manager.active_terms if u.reward_manager.get_term_cfg(n).weight > 0)
+    paid, commands, standing = [], [], []
+    with torch.inference_mode():
+        for _ in range(8):
+            term._resample_command(everyone)
+            total = torch.zeros(u.num_envs, device=u.device)
+            for step in range(6):
+                env.step(zero)
+                if step >= 2:
+                    total += u.reward_manager._step_reward.sum(dim=1)
+            paid.append(total / 4 / full)
+            commands.append(term.vel_command_b.clone())
+            standing.append(term.is_standing_env.clone())
+    paid, commands, standing = torch.cat(paid), torch.cat(commands), torch.cat(standing)
+    speed, turn = torch.linalg.norm(commands[:, :2], dim=1), commands[:, 2].abs()
+    spin = ~standing & (speed == 0)
+    drive = ~standing & ~spin
+    moving = ~standing
+    r = c.ranges
+    mix = {
+        "commands_sampled": int(commands.shape[0]),
+        "standing_share": standing.float().mean().item(),
+        "spin_share_of_moving": (spin.sum() / moving.sum()).item(),
+        "straight_share_of_drive": ((turn == 0) & drive).sum().item() / drive.sum().item(),
+        "slowest_drive_m_s": speed[drive].min().item(),
+        "slowest_spin_rad_s": turn[spin].min().item(),
+        "motionless_share_of_income": {
+            "moving": paid[moving].mean().item(),
+            "drive": paid[drive].mean().item(),
+            "spin": paid[spin].mean().item(),
+            "told_to_stand": paid[standing].mean().item(),
+        },
+    }
+    out["command_mix"] = mix
+    print("command mix", json.dumps(mix))
+    check(bool((commands[standing] == 0).all()), "a robot told to stand has a command")
+    check(close(mix["standing_share"], TASK_STANDING, 0.03), f"standing share {mix['standing_share']:.3f} vs {TASK_STANDING}")
+    check(close(mix["spin_share_of_moving"], c.rel_spin_envs, 0.03), f"spin share {mix['spin_share_of_moving']:.3f} vs {c.rel_spin_envs}")
+    check(mix["slowest_drive_m_s"] >= c.min_speed - 1e-5, f"a driving robot is told to walk at {mix['slowest_drive_m_s']:.4f} m/s")
+    check(mix["slowest_spin_rad_s"] >= c.min_turn - 1e-5, f"a spinning robot is told to turn at {mix['slowest_spin_rad_s']:.4f} rad/s")
+    check(not bool(((turn > 0) & (turn < c.min_turn - 1e-5)).any()), "a turn rate between zero and the floor was commanded")
+    check(bool((commands[:, 0] >= r.lin_vel_x[0] - 1e-5).all() and (commands[:, 0] <= r.lin_vel_x[1] + 1e-5).all()), "forward command outside its range")
+    check(bool((commands[:, 1] >= r.lin_vel_y[0] - 1e-5).all() and (commands[:, 1] <= r.lin_vel_y[1] + 1e-5).all()), "sideways command outside its range")
+    check(bool((commands[:, 2] >= r.ang_vel_z[0] - 1e-5).all() and (commands[:, 2] <= r.ang_vel_z[1] + 1e-5).all()), "turn command outside its range")
+    check(mix["motionless_share_of_income"]["told_to_stand"] > 0.95, f"standing when told to earns only {mix['motionless_share_of_income']['told_to_stand']:.2f}")
+    check(mix["motionless_share_of_income"]["moving"] < 0.30, f"a motionless robot earns {mix['motionless_share_of_income']['moving']:.1%} of a walking robot's income (limit 30%)")
 
 out["checked"] = checked
 out["problems"] = problems

@@ -27,6 +27,8 @@ from isaaclab.utils.noise import UniformNoiseCfg as Unoise
 import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .actions import LegActionWithScriptedArmCfg
+from .commands import ScorbiVelocityCommandCfg
+from .rewards import track_twist_exp
 from .robot import LEG_JOINTS, SCORBI_CFG
 
 # The website's command limits and what is trained (plan 2.6): a little wider, so the website
@@ -60,7 +62,8 @@ class ScorbiSceneCfg(InteractiveSceneCfg):
 
 @configclass
 class CommandsCfg:
-    base_velocity = mdp.UniformVelocityCommandCfg(
+    # Stand 10%; of the rest, spin on the spot 15%; the others walk at 0.06 m/s or more (commands.py).
+    base_velocity = ScorbiVelocityCommandCfg(
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.1,
@@ -68,7 +71,10 @@ class CommandsCfg:
         # Heading mode off: the website turns heading error into a turn rate itself (plan 5.2).
         heading_command=False,
         debug_vis=False,
-        ranges=mdp.UniformVelocityCommandCfg.Ranges(heading=None, **TRAIN_RANGES),
+        ranges=ScorbiVelocityCommandCfg.Ranges(heading=None, **TRAIN_RANGES),
+        min_speed=0.06,
+        min_turn=0.3,
+        rel_spin_envs=0.15,
     )
 
 
@@ -138,13 +144,13 @@ class EventsCfg:
 
 @configclass
 class RewardsCfg:
-    """Rung 0 of the reward ladder (plan 5.4): the two tracking terms and nothing else."""
+    """Rung 0 of the reward ladder (plan 5.4): tracking and nothing else.
 
-    track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_exp, weight=1.0, params={"command_name": "base_velocity", "std": LIN_STD}
-    )
-    track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": ANG_STD}
+    One joint term, not Isaac Lab's two: see rewards.track_twist_exp and research entry 0002.
+    """
+
+    track_twist_exp = RewTerm(
+        func=track_twist_exp, weight=1.5, params={"command_name": "base_velocity", "lin_std": LIN_STD, "ang_std": ANG_STD}
     )
 
 
