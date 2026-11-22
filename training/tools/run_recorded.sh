@@ -3,6 +3,8 @@
 #   run_recorded.sh NAME TASK SEED ITERATIONS 'META JSON' [DETAIL_AT]
 # Writes /workspace/logs/NAME.*.log and, when everything is done, <run>/scorbi/eval_done.json.
 set -u
+# A queued run is cancelled by creating /workspace/skip/NAME before it starts.
+if [ -e "/workspace/skip/$1" ]; then echo "$(date -u +%FT%TZ) skipped $1" >> /workspace/logs/skipped.log; exit 0; fi
 NAME=$1; TASK=$2; SEED=$3; ITERS=$4; META=$5; DETAIL=${6:-0,5,20,50,100,200,300,400,last}
 # SCORBI_CODE names another checkout to run from (default /workspace/Scorbi), so new code can run beside a queue that uses the old.
 CODE=${SCORBI_CODE:-/workspace/Scorbi}; T=$CODE/training/tools; L=/workspace/logs

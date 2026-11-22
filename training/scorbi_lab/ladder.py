@@ -164,6 +164,22 @@ class Ladder1StepsRewardsCfg(Ladder1RewardsCfg):
     long_steps = RewTerm(func=long_steps, weight=EXTRA[1][2], params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")})
 
 
+# Rung 3 (foot_slip) made the walk worse (research 0008), so rungs 4 to 6 are also tried one at a time on rung 2.
+@configclass
+class Ladder2DragRewardsCfg(Ladder2RewardsCfg):
+    foot_drag = RewTerm(func=foot_drag, weight=LADDER[3][2], params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")})
+
+
+@configclass
+class Ladder2BounceRewardsCfg(Ladder2RewardsCfg):
+    body_bounce = RewTerm(func=body_bounce, weight=LADDER[4][2])
+
+
+@configclass
+class Ladder2FidgetRewardsCfg(Ladder2RewardsCfg):
+    fidget_at_rest = RewTerm(func=fidget_at_rest, weight=LADDER[5][2], params={"asset_cfg": SceneEntityCfg("robot", joint_names=LEG_JOINTS, preserve_order=True)})
+
+
 @configclass
 class Ladder1EnvCfg(ScorbiFlatEnvCfg):
     rewards: Ladder1RewardsCfg = Ladder1RewardsCfg()
@@ -197,3 +213,18 @@ class Ladder6EnvCfg(ScorbiFlatEnvCfg):
 @configclass
 class Ladder1StepsEnvCfg(ScorbiFlatEnvCfg):
     rewards: Ladder1StepsRewardsCfg = Ladder1StepsRewardsCfg()
+
+
+@configclass
+class Ladder2DragEnvCfg(ScorbiFlatEnvCfg):
+    rewards: Ladder2DragRewardsCfg = Ladder2DragRewardsCfg()
+
+
+@configclass
+class Ladder2BounceEnvCfg(ScorbiFlatEnvCfg):
+    rewards: Ladder2BounceRewardsCfg = Ladder2BounceRewardsCfg()
+
+
+@configclass
+class Ladder2FidgetEnvCfg(ScorbiFlatEnvCfg):
+    rewards: Ladder2FidgetRewardsCfg = Ladder2FidgetRewardsCfg()
