@@ -18,7 +18,7 @@ from isaaclab.utils import configclass
 import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .env_cfg import EventsCfg, ScorbiFlatEnvCfg
-from .ladder import Ladder1RewardsCfg, Ladder2RewardsCfg
+from .ladder import Ladder1RewardsCfg, Ladder2BounceRewardsCfg
 
 # The group probes (Walk-G1 to G8) were queued while block D was undecided and keep rung 1's reward,
 # so that they stay comparable with each other. The production run has the chosen recipe (below).
@@ -185,8 +185,9 @@ class WalkG8EnvCfg(WalkEnvCfg):
 
 
 # ── the production run (block E) ──────────────────────────────────────────
-# The recipe chosen in block D (research 0010): rung 2. Tracking, action change, a price on falling, leg torque.
-ProductionRewardsCfg = Ladder2RewardsCfg
+# The recipe chosen in block D (research 0011): rung 2 plus the body-bounce term.
+# Tracking, action change, a price on falling, leg torque, vertical body speed with roll and pitch rate.
+ProductionRewardsCfg = Ladder2BounceRewardsCfg
 
 
 @configclass
