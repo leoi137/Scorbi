@@ -22,6 +22,13 @@ class LegActionWithScriptedArm(JointPositionAction):
         assert list(names) == ARM_JOINTS, names
         self._arm_joint_ids = ids
         self.arm_target: torch.Tensor = self._asset.data.default_joint_pos.torch[:, ids].clone()
+        limits = self._asset.data.joint_pos_limits.torch[:, self._joint_ids]
+        self._lowest, self._highest = limits[..., 0].clone(), limits[..., 1].clone()
+
+    def process_actions(self, actions: torch.Tensor):
+        # A servo cannot be told to go past its range, and the website clamps its targets the same way.
+        super().process_actions(actions)
+        self._processed_actions[:] = torch.clamp(self._processed_actions, self._lowest, self._highest)
 
     def apply_actions(self):
         super().apply_actions()
