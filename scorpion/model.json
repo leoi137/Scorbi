@@ -1,5 +1,5 @@
 {
-  "source": "robot/cad (scorpion spider v0.4)",
+  "source": "robot/cad (scorpion spider v0.5)",
   "frame": "x forward, y left, z up; metres, radians",
   "joints": [
     {
@@ -182,7 +182,7 @@
     "damping": 0.05,
     "frictionloss": 0.02
   },
-  "mass": 1.0499999999999998,
+  "mass": 1.253,
   "feet": [
     "fl_foot",
     "fr_foot",

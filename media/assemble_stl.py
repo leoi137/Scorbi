@@ -39,7 +39,7 @@ rec = np.zeros(len(tris), dtype=[("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<
 rec["n"], rec["v"] = n, tris
 out = HERE / "media" / "scorbi.stl"
 with open(out, "wb") as fh:
-    fh.write(b"Scorbi scorpion spider v0.4, standing, millimetres".ljust(80, b" "))
+    fh.write(b"Scorbi scorpion spider v0.5, standing, millimetres".ljust(80, b" "))
     fh.write(np.uint32(len(tris)).tobytes())
     fh.write(rec.tobytes())
 print(f"wrote {out.relative_to(HERE)}: {len(tris)} triangles, {out.stat().st_size / 1e6:.1f} MB")
