@@ -23,17 +23,19 @@ It is not built yet. Nothing has been printed, wired or switched on. You can try
 
 ## Status
 
-- **CAD and simulation model: v0.4.** The CadQuery scripts in `cad/` and the model in `scorpion/` are v0.4.
-- **Build pack: v0.5.** Three reviews found 52 problems in v0.4, five of them dangerous. v0.5 fixes them, and `build-pack/` says how: the findings, how to print, wire, build and test it, and what only a real build can prove. The v0.5 CAD files and shopping list it mentions are not in this repository yet.
+- **Everything here is v0.5:** the CAD in `cad/`, the model in `scorpion/` and the build pack in `build-pack/`.
+- **The build pack explains v0.5.** Three reviews found 52 problems in v0.4, five of them dangerous. The build pack lists them with their fixes, says how to print, wire, build and test the robot, and lists what only a real build can prove.
+- **The v0.5 CAD was rebuilt from the build pack.** Its original source files were lost, so `cad/` is v0.4 with every fix the pack describes made again. Every part's size matches the pack's print table, except that the battery door is 1 mm longer (91 mm, to keep plastic round its screws), and the weights come out within a few grams. Every pose and joint range has been checked again. Treat the pack's pictures as a guide to the layout: small details can differ.
+- **Not here yet:** the shopping list, the motor setup tool `servo_tool.py`, and the full text of the three reviews.
 
-Don't build v0.4 from the files here. Wait for the v0.5 CAD.
+Print the test piece first and do tests A1 to A7 (build pack, "Print guide" and "Test plan") before you print anything else.
 
 ## What's here
 
 | Path | What |
 |---|---|
 | `build-pack/` | The v0.5 build pack. Download the repository and open `build-pack/index.html` in a browser. |
-| `cad/` | The v0.4 CadQuery scripts. Every size is a named number in `cad/parts.py` and `cad/body.py`. Run on their own, they write print files and check results to `out/`, which is not committed. To use the motor maker's own 3D model, download Feetech's STEP file for the HD-1910-C001 and put it in `cad/` (see `cad/vendor.py`). |
+| `cad/` | The v0.5 CadQuery scripts. Every size is a named number in `cad/parts.py` and `cad/body.py`; the fits the test piece checks are `CHK_IN`, `ARM_IN`, `M2_PILOT`, `M25_PILOT` and `NUT_AF`. `python export.py --files`, run in `cad/`, writes the print files (STL and STEP, turned the right way up) to `out/pack/`, which is not committed. `check_rest.py`, `check_poses.py` and `check_sweeps.py` check for collisions. To use the motor maker's own 3D model, download Feetech's STEP file for the HD-1910-C001 and put it in `cad/` (see `cad/vendor.py`). |
 | `build_model.py` | Turns the CAD into the model files below. |
 | `check_model.py` | Loads the model in MuJoCo and checks it against the CAD: feet, mass, standing, a drop. |
 | `scorpion/scorpion.xml` | MJCF of the robot alone. |
@@ -41,7 +43,7 @@ Don't build v0.4 from the files here. Wait for the v0.5 CAD.
 | `scorpion/scorpion.urdf` | The same robot as URDF. |
 | `scorpion/model.json` | Joint ranges, the standing pose and the motor settings. |
 | `scorpion/meshes/` | One STL per part, in metres, in the part's own frame. |
-| `media/` | The pictures above and the whole robot as one STL, `scorbi.stl`, which GitHub shows in a 3D viewer. The scripts that make them are in the same folder; see [Remake the pictures](#remake-the-pictures). |
+| `media/` | The pictures above and the whole robot as one STL, `scorbi.stl`, which GitHub shows in a 3D viewer. The STL is v0.5. The pictures are still v0.4. From outside, v0.5 differs in two places: a round toggle switch on a small flat seat at the back of the head replaces the rocker, and the USB-C charging hole in the back of the chassis is gone. The scripts that make them are in the same folder; see [Remake the pictures](#remake-the-pictures). |
 
 ## Licenses
 
@@ -96,12 +98,15 @@ sh media/make_gif.sh /tmp/scorbi
 - **Knee angle:** the CAD measures the knee as the angle between thigh and shin, so the CAD's knee angle is 180 degrees minus this one. The ranges above are the collision-free ranges from the CAD sweeps.
 - **Standing pose:** in `model.json`: hip lift 0.708, knee 2.376, shoulder 1.25, elbow -1.80.
 - **Feet:** the feet are fixed bodies named `fl_foot`, `fr_foot`, `rl_foot` and `rr_foot`. Each has a 13.5 mm sphere for contact, so Isaac Lab's contact sensors and foot rewards can name them.
-- **Mass:** the mass is 1050 g, matching the CAD pack's estimate. Printed parts (499 g) and motors (21 g each) are placed where they are. The electronics sit as boxes in the base: the 2S pack in the belly door, the charge board at the back wall, and the boards on the deck. The 68 g left over (screws, wires, switch and fuse) is spread over the deck.
+- **Mass:** 1253 g, the v0.5 build pack's figure for the robot with its battery.
+  - The printed parts (584 g) and the motors (21 g each) are placed where they are.
+  - The bought parts sit as boxes in the base: the 2S pack in the belly door, the main fuse and the low-battery alarm on the belly floor, the brain, bus adapter, converter, motion sensor and hub on the deck, the USB hub and chain fuses on the fuse shelf, the camera in its rails at the front of the deck, and the switch, speaker and sound card in the head shell.
+  - The 61 g left over (screws, wires and cables) is spread over the deck.
 - **Collisions:** shapes are simple: boxes for the body, capsules for the links, spheres for the feet and boxes for the claw. Self-collision is off.
 
 ## Motors
 
-Feetech HD-1910-C001, running straight off the 2S pack (6.0 to 8.4 V). The model uses its 6 V figures, the low end of the pack: 1.18 N m (12 kg cm) stall torque and 9.6 rad/s (92 rpm) with no load. The model drives each joint with a position controller:
+Feetech HD-1910-C001, running straight off the 2S pack (6.6 to 8.2 V: the pack is charged to 4.10 V per cell, and the software sits the robot down at 6.6 V). The model uses its 6 V figures, the low end of the pack: 1.18 N m (12 kg cm) stall torque and 9.6 rad/s (92 rpm) with no load. The model drives each joint with a position controller:
 
 | | MuJoCo | Isaac Lab |
 |---|---|---|
