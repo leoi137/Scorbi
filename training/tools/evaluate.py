@@ -60,6 +60,13 @@ STAND_HEIGHT = 0.0717  # m: the base above the floor when standing in this simul
 BODY_LENGTH = 0.30  # m, as Account 1's tests count it
 FALL_TILT = math.radians(60.0)
 DETAIL_HZ = 100
+# The ball of skill 5 (THE SHOVE): a real simulated ball. It waits on the floor to one seeded side of the robot and is
+# thrown at the body three times, each time from wherever it came to rest, so a recording has no cut and no jump.
+BALL_HITS_AT = (5.0, 10.0, 15.0)  # s
+BALL_FROM = 0.8  # m from the robot when the episode starts
+BALL_AIM = 0.07  # m above the floor: the middle of the body
+BALL_DRAG = 0.95  # between throws the ball's speed is multiplied by this every control step, so it stays in the shot
+BALL_COLOUR = (1.0, 0.45, 0.40)  # coral
 
 # name, (forward m/s, sideways m/s, turn rad/s), shoved, the Account 1 skill it feeds
 CELLS = [
@@ -88,6 +95,9 @@ parser.add_argument("--noise_std", type=float, default=0.0, help="exploration no
 parser.add_argument("--do_nothing", action="store_true", help="the control arm: zero actions instead of the policy")
 parser.add_argument("--batch", default=None, help="folder suffix; default from the options")
 parser.add_argument("--shove_speeds", default=None, help="a shove ladder, such as 0.2,0.3,0.5 (m/s): only the two shoved commands, once per speed; batch 'extra'")
+parser.add_argument("--ball_speeds", default=None, help="skill 5 with a real ball, such as 3,5,7 (m/s): the two shoved commands, three hits each from seeded sides; batch 'ball'")
+parser.add_argument("--ball_mass", type=float, default=0.2, help="kg")
+parser.add_argument("--ball_radius", type=float, default=0.035, help="m")
 parser.add_argument("--detail_at", default="first,last", help="iterations recorded in full detail: a list, first, last, all or none")
 parser.add_argument("--detail_seeds", type=int, default=4, help="clean seeds per cell kept in full detail at the first and last checkpoint; half as many at the others")
 parser.add_argument("--skip_done", action="store_true", help="skip checkpoints that already have episodes.json")
@@ -112,11 +122,14 @@ def listed(text: str) -> list[int]:
 
 iterations = [0] if args.do_nothing else listed(args.iterations)
 detail_at = set(listed(args.detail_at)) & set(iterations)
-batch = args.batch or ("do_nothing" if args.do_nothing else "noise" if args.noise_std else "extra" if args.shove_speeds else "")
+batch = args.batch or ("do_nothing" if args.do_nothing else "noise" if args.noise_std else "extra" if args.shove_speeds else "ball" if args.ball_speeds else "")
 # name, command, shove speed in m/s (0 = none), skill
 cells = [(name, cmd, SHOVE_SPEED if shoved else 0.0, skill) for name, cmd, shoved, skill in CELLS if args.cells is None or name in args.cells.split(",")]
 if args.shove_speeds:  # the same two shoved commands at harder shoves: forward_shoved_30 is 0.30 m/s
     cells = [(f"{name}_{round(float(v) * 100):02d}", cmd, float(v), skill) for v in args.shove_speeds.split(",") for name, cmd, shoved, skill in CELLS if shoved]
+BALL = bool(args.ball_speeds)
+if BALL:  # stand_ball_500 is the stand command hit by the ball at 5.00 m/s; the third field is then the ball's speed
+    cells = [(f"{name.replace('_shoved', '_ball')}_{round(float(v) * 100):03d}", cmd, float(v), skill) for v in args.ball_speeds.split(",") for name, cmd, shoved, skill in CELLS if shoved]
 N = len(cells) * args.seeds
 STEPS = int(round(SECONDS / 0.02))
 ROWS = 2 * STEPS + 1
@@ -141,6 +154,21 @@ env_cfg.terminations.bad_orientation = None
 if hasattr(env_cfg.terminations, "blow_up"):
     env_cfg.terminations.blow_up = None  # watched for below instead
 env_cfg.episode_length_s = 1000.0
+if BALL:
+    import isaaclab.sim as sim_utils
+    from isaaclab.assets import RigidObjectCfg
+
+    env_cfg.scene.ball = RigidObjectCfg(
+        prim_path="{ENV_REGEX_NS}/Ball",
+        spawn=sim_utils.SphereCfg(
+            radius=args.ball_radius,
+            rigid_props=sim_utils.UsdPhysicsRigidBodyCfg(),
+            mass_props=sim_utils.MassCfg(mass=args.ball_mass),
+            collision_props=sim_utils.UsdPhysicsCollisionCfg(),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=BALL_COLOUR),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(-BALL_FROM, 0.0, args.ball_radius)),  # moved to its seeded side at the start
+    )
 
 with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
     import gymnasium as gym
@@ -178,10 +206,12 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
     seed_of = np.tile(np.arange(args.seeds), len(cells))
     scatter = np.stack([np.random.default_rng(1000 + s).uniform(-0.05, 0.05, len(JOINTS)) for s in seed_of])
     shove_angle = np.array([np.random.default_rng(2000 + s).uniform(0, 2 * math.pi) for s in seed_of])
+    ball_angle = shove_angle  # the side the ball waits on: the direction the shove comes from
+    ball = u.scene["ball"] if BALL else None
     cmd_np = np.array([cells[c][1] for c in cell_of], dtype=np.float32)
     commands = torch.tensor(cmd_np, device=device)
     shove_speed = np.array([cells[c][2] for c in cell_of], dtype=np.float32)
-    shoved = torch.tensor(shove_speed > 0, device=device)
+    shoved = torch.tensor((shove_speed > 0) & (not BALL), device=device)
     moving_axis = commands.abs() > 1e-6
     planar = commands[:, :2] / commands[:, :2].norm(dim=1, keepdim=True).clamp(min=1e-9)
     kick = torch.tensor(np.stack([np.cos(shove_angle), np.sin(shove_angle)], 1) * shove_speed[:, None], dtype=torch.float32, device=device)
@@ -194,7 +224,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
     columns, width = {}, 0
     for key, n in (("root_pos", 3), ("root_quat", 4), ("lin_vel_body", 3), ("ang_vel_body", 3), ("joint_pos", 15), ("joint_vel", 15),
                    ("joint_torque", 15), ("action", 12), ("command", 3), ("foot_force", 12), ("foot_pos", 12), ("base_force", 3),
-                   ("reward_terms", R), ("shove", 2)):
+                   ("reward_terms", R), ("shove", 2)) + ((("ball_pos", 3),) if BALL else ()):
         columns[key] = [width, width + n]
         width += n
     detail_buf = torch.zeros(ROWS, N, width, device=device) if detail_at else None
@@ -218,6 +248,8 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
         b[:, col("foot_force")] = forces[:, foot_sensor].reshape(N, 12)
         b[:, col("foot_pos")] = (d.body_link_pos_w.torch[:, foot_body] - origin[:, None]).reshape(N, 12)
         b[:, col("base_force")] = forces[:, base_sensor]
+        if BALL:
+            b[:, col("ball_pos")] = ball.data.root_link_pos_w.torch - origin
 
     scene_update = u.scene.update
 
@@ -261,12 +293,24 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
         z = lambda *shape, **kw: torch.zeros(*shape, device=device, **kw)  # noqa: E731
         root_pos, root_quat, joint_pos = z(STEPS + 1, N, 3), z(STEPS + 1, N, 4), z(STEPS + 1, N, len(JOINTS))
         contact = z(STEPS + 1, N, 4, dtype=torch.bool)
+        ball_pos = z(STEPS + 1, N, 3) if BALL else None
+        hit_steps = [int(round(at / 0.02)) + 1 for at in BALL_HITS_AT] if BALL else []
+        hit_before, hit_change, hit_side, hit_until = z(len(BALL_HITS_AT), N, 2), z(len(BALL_HITS_AT), N), z(len(BALL_HITS_AT), N, 2), z(N)
+        if BALL:
+            pose = ball.data.default_root_pose.torch.clone()
+            side = torch.tensor(np.stack([np.cos(ball_angle), np.sin(ball_angle)], 1), dtype=torch.float32, device=device)
+            pose[:, :2] = d.root_link_pos_w.torch[:, :2] - side * BALL_FROM
+            pose[:, 2] = origin[:, 2] + args.ball_radius
+            ball.write_root_pose_to_sim_index(root_pose=pose)
+            ball.write_root_velocity_to_sim_index(root_velocity=z(N, 6))
 
         def snapshot(t: int) -> None:
             root_pos[t] = d.root_link_pos_w.torch - origin
             root_quat[t] = d.root_link_quat_w.torch
             joint_pos[t] = d.joint_pos.torch[:, order]
             contact[t] = sensor.data.net_forces_w.torch[:, foot_sensor].norm(dim=-1) > 0.3
+            if BALL:
+                ball_pos[t] = ball.data.root_link_pos_w.torch - origin
 
         alive = torch.ones(N, dtype=torch.bool, device=device)
         s = {k: z(N) for k in ("fell_step", "fall_tilt", "fall_height", "fall_gx", "limit_legs", "over15", "over15_at_fall", "measured", "parked",
@@ -279,7 +323,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
         torque_peak, torque_sum, at_limit = z(N, len(JOINTS)), z(N, len(JOINTS)), z(N, len(JOINTS))
         noise = torch.Generator(device=device).manual_seed(iteration * 7919 + 1)
         previous = z(N, 12)
-        pushes: dict[int, dict] = {}
+        pushes: dict[int, list[dict]] = {}
         began = time.time()
 
         snapshot(0)
@@ -299,8 +343,31 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                     if detail:
                         detail_buf[2 * (t - 1), :, col("shove")] = kick * shoved[:, None]
                     for i in torch.nonzero(shoved).flatten().tolist():
-                        pushes[i] = {"at_seconds": SHOVE_AT, "speed_change_m_s": float(shove_speed[i]), "direction": [float(np.cos(shove_angle[i])), float(np.sin(shove_angle[i])), 0.0],
-                                     "impulse_newton_seconds": float(shove_speed[i]) * MODEL["mass"], "how": "a step change in the base's speed, in the world frame; no ball is simulated"}
+                        pushes[i] = [{"at_seconds": SHOVE_AT, "speed_change_m_s": float(shove_speed[i]), "direction": [float(np.cos(shove_angle[i])), float(np.sin(shove_angle[i])), 0.0],
+                                     "impulse_newton_seconds": float(shove_speed[i]) * MODEL["mass"], "how": "a step change in the base's speed, in the world frame; no ball is simulated"}]
+                if t in hit_steps:
+                    # throw the ball from where it lies at where the body will be, on an arc that reaches the middle of the body
+                    k = hit_steps.index(t)
+                    speed = torch.tensor(shove_speed, device=device)
+                    here = ball.data.root_link_pos_w.torch.clone()
+                    body_vel = d.root_com_vel_w.torch[:, :2]
+                    flight = (d.root_link_pos_w.torch[:, :2] - here[:, :2]).norm(dim=1) / speed
+                    to = d.root_link_pos_w.torch[:, :2] + body_vel * flight[:, None] - here[:, :2]
+                    side = to / to.norm(dim=1, keepdim=True).clamp(min=1e-6)
+                    flight = to.norm(dim=1) / speed
+                    velocity = z(N, 6)
+                    velocity[:, :2] = side * speed[:, None]
+                    velocity[:, 2] = (origin[:, 2] + BALL_AIM - here[:, 2]) / flight.clamp(min=1e-3) + 9.81 * flight / 2
+                    ball.write_root_velocity_to_sim_index(root_velocity=velocity)
+                    hit_before[k], hit_side[k] = body_vel, side
+                    hit_until = t + (flight / 0.02).ceil() + 20  # the flight and 0.4 s after it are left to the physics
+                elif BALL:
+                    slow = ball.data.root_com_vel_w.torch.clone()
+                    slow[t > hit_until] *= BALL_DRAG
+                    ball.write_root_velocity_to_sim_index(root_velocity=slow)
+                for k, at in enumerate(hit_steps):  # how much the hit changed the body's speed: the largest change in the 0.3 s after
+                    if at <= t <= at + 30:
+                        hit_change[k] = torch.maximum(hit_change[k], torch.nan_to_num(d.root_com_vel_w.torch[:, :2] - hit_before[k]).norm(dim=1))
                 hook["t"], hook["k"], hook["action"] = t, 0, actions
                 obs, rew, _, _ = env.step(actions)
                 term.vel_command_b[:] = commands
@@ -318,6 +385,9 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                 height = clean(root_pos[t, :, 2])
                 v = clean(torch.cat([d.root_link_lin_vel_b.torch[:, :2], d.root_link_ang_vel_b.torch[:, 2:3]], 1))
                 touching = clean(sensor.data.net_forces_w_history.torch[:, :, base_sensor]).norm(dim=-1).amax(dim=1) > 0.5
+                if BALL:  # the ball pressing on the body is not the floor: while it is within reach, only a body down at belly height counts
+                    ball_near = (ball_pos[t] - root_pos[t]).norm(dim=1) < 0.25
+                    touching = touching & (~ball_near | (height < 0.035))
                 # the task's own rule for a fall: the body touches the floor, or tips past 60 degrees
                 fall = alive & (touching | (tilt > FALL_TILT) | lost)
                 a = alive.float()
@@ -384,6 +454,14 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                 buf[glitch[i] :, i] = buf[glitch[i] - 1, i]
             contact[glitch[i] :, i] = False
         pos = root_pos.cpu().numpy()
+        if BALL:
+            change, sides = hit_change.cpu().numpy(), hit_side.cpu().numpy()
+            for i in range(N):
+                pushes[i] = [{"at_seconds": at, "ball_speed_m_s": float(shove_speed[i]), "ball_mass_kg": args.ball_mass, "ball_radius_m": args.ball_radius,
+                              "direction": [float(sides[k, i, 0]), float(sides[k, i, 1]), 0.0],
+                              "robot_speed_change_m_s": float(change[k, i]), "impulse_newton_seconds": float(change[k, i]) * MODEL["mass"],
+                              "how": "a simulated ball thrown at the middle of the body from where it lay; the speed change is the largest in the 0.6 s after the throw"}
+                             for k, at in enumerate(BALL_HITS_AT)]
         feet = contact.cpu().numpy()
         steps_alive = np.maximum(n["steps"], 1)
         mean_torque = (torque_sum.cpu().numpy()) / steps_alive[:, None]
@@ -405,6 +483,8 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
             _, cmd, was_shoved, _ = cells[cell_of[i]]
             if fell[i]:
                 return False
+            if BALL:  # Account 1's test for skill 5: still standing 3 s after each of three hits. The last hit is 5 s before the end.
+                return True
             if not any(cmd):
                 upright = n["height_min"][i] >= 0.85 * STAND_HEIGHT
                 return bool(upright and drift[i] < 0.30) if was_shoved else bool(upright and math.degrees(n["tilt_settled"][i]) < 15.0 and drift[i] < 0.10)
@@ -498,7 +578,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                 "torque_peak_n_m": [round(float(x), 4) for x in peak[i]],
                 "torque_mean_n_m": [round(float(x), 4) for x in mean_torque[i]],
                 "share_of_time_at_limit_max": float(limit_share[i].max()),
-                "pushes": [pushes[i]] if i in pushes else [],
+                "pushes": pushes.get(i, []),
             })
 
         # ── the gait, read from the foot contacts of the forward cells ──────
@@ -573,7 +653,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                              "shove": "m/s added to the base in x and y between this row and the next"},
                 "joints": JOINTS, "action_joints": LEG_JOINTS,
             }
-        np.savez_compressed(os.path.join(out, "poses.npz"), root_pos=pos, root_quat=root_quat.cpu().numpy(), joint_pos=joint_pos.cpu().numpy(),
+        np.savez_compressed(os.path.join(out, "poses.npz"), **({"ball_pos": ball_pos.cpu().numpy()} if BALL else {}), root_pos=pos, root_quat=root_quat.cpu().numpy(), joint_pos=joint_pos.cpu().numpy(),
                             foot_contact=feet, length=np.full(N, STEPS), fell_step=np.where(fell, n["fell_step"], -1).astype(np.int32))
 
         summary = []
@@ -596,6 +676,12 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
             "channels": {"root_pos": "metres; x and y from where the robot started, z above the floor", "root_quat": quat_order, "joint_pos": "radians, in the order of `joints`",
                          "foot_contact": "true when the foot presses on the floor with more than 0.3 N, in the order of `feet`", "length": "steps recorded", "fell_step": "the step of the fall, or -1"},
             "start": "joint scatter of +-0.05 rad from rng(1000 + seed); shove direction from rng(2000 + seed)",
+            "ball": {"mass_kg": args.ball_mass, "radius_m": args.ball_radius, "colour_rgb": BALL_COLOUR, "hits_at_seconds": BALL_HITS_AT, "starts_m_from_robot": BALL_FROM,
+                     "sides": "it waits on the side the shove comes from (rng(2000 + seed)); each throw is from where the ball then lies, so the three sides differ",
+                     "drag": f"between throws its speed is multiplied by {BALL_DRAG} every 0.02 s; a throw and the 0.4 s after it are left to the physics",
+                     "pose": "ball_pos in poses.npz, as root_pos",
+                     "test": "no fall: still standing 3 s after each of the three hits (Account 1 part 8.11, skill 5)",
+                     "fall": "while the ball is within 0.25 m of the body, contact on the body counts as a fall only if the body is under 35 mm high"} if BALL else None,
             "starts": {str(k): {"scatter": dict(zip(JOINTS, scatter[k].tolist())), "shove_angle": float(shove_angle[k])} for k in range(args.seeds)},
             "fall": "the task's rule: the body touches the floor (over 0.5 N), or the robot tips past 60 degrees. The episode is recorded to the end; numbers count up to the fall.",
             "tests": {"stand": "no fall, body at 85% of standing height or more, tilt under 15 degrees after the first second, drift under 0.10 m",

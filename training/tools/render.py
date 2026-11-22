@@ -18,7 +18,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 CREAM = (1.0, 0.957, 0.878)  # #FFF4E0, the floor and sky of the sim world (Account 1 strategy, part 4)
 
 
-def studio() -> mujoco.MjModel:
+def studio(ball: dict | None = None) -> mujoco.MjModel:
     """The robot in the content look: a cream floor with a faint grid, soft shadows, no horizon."""
     spec = mujoco.MjSpec.from_file(str(ROOT / "scorpion" / "scene.xml"))
     grid = spec.texture("grid")
@@ -43,6 +43,9 @@ def studio() -> mujoco.MjModel:
                              diffuse=(0.30, 0.30, 0.30), specular=(0.12, 0.12, 0.12), ambient=(0, 0, 0))
     spec.worldbody.add_light(pos=(-1.0, 1.0, 0.6), dir=(0.64, -0.64, -0.42), type=mujoco.mjtLightType.mjLIGHT_DIRECTIONAL, castshadow=False,
                              diffuse=(0.14, 0.14, 0.14), specular=(0, 0, 0), ambient=(0, 0, 0))
+    if ball:  # the coral ball of skill 5, moved by hand to where the recording says it was
+        body = spec.worldbody.add_body(name="ball", mocap=True, pos=(0, 0, -1))
+        body.add_geom(type=mujoco.mjtGeom.mjGEOM_SPHERE, size=(ball["radius_m"], 0, 0), rgba=(*ball["colour_rgb"], 1.0), contype=0, conaffinity=0)
     m = spec.compile()
     m.vis.headlight.ambient[:] = 0.50
     m.vis.headlight.diffuse[:] = 0.0  # a light on the camera would make the floor's colour depend on the camera
@@ -90,7 +93,8 @@ if meta["quat_order"] == "xyzw":
     quat = quat[:, [3, 0, 1, 2]]
 
 width, height = (int(v) for v in args.size.split("x"))
-m = studio()
+ball_pos = poses["ball_pos"][: length + 1, i][good] if "ball_pos" in poses else None
+m = studio(meta.get("ball") if ball_pos is not None else None)
 m.vis.global_.offwidth, m.vis.global_.offheight = width, height
 names = [m.joint(j).name for j in range(1, m.njnt)]
 assert names == meta["joints"], "the recording's joint order is not the model's"
@@ -125,6 +129,8 @@ frames = [min(first + int(round(k * rate / args.fps)), last) for k in range(int(
 if args.still is not None:
     t = min(int(args.still * rate), len(pos) - 1)
     d.qpos[:3], d.qpos[3:7], d.qpos[7:] = pos[t], quat[t], joints[t]
+    if ball_pos is not None:
+        d.mocap_pos[0] = ball_pos[t]
     mujoco.mj_forward(m, d)
     cam.lookat[:] = [pos[t, 0], pos[t, 1], 0.06]
     renderer.update_scene(d, cam)
@@ -139,6 +145,8 @@ ffmpeg = subprocess.Popen(
 )
 for t in frames:
     d.qpos[:3], d.qpos[3:7], d.qpos[7:] = pos[t], quat[t], joints[t]
+    if ball_pos is not None:
+        d.mocap_pos[0] = ball_pos[t]
     mujoco.mj_forward(m, d)
     if follows:  # a slight lag, so the robot moves in the frame
         look += 0.15 * (np.array([pos[t, 0], pos[t, 1], 0.06]) - look)

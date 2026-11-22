@@ -1,5 +1,5 @@
 #!/bin/bash
-# One recorded run on the GPU: train, then evaluate every saved checkpoint, the noise batch, the do-nothing control and the shove ladder.
+# One recorded run on the GPU: train, then evaluate every saved checkpoint, the noise batch, the do-nothing control, the shove ladder and the ball.
 #   run_recorded.sh NAME TASK SEED ITERATIONS 'META JSON' [DETAIL_AT]
 # Writes /workspace/logs/NAME.*.log and, when everything is done, <run>/scorbi/eval_done.json.
 set -u
@@ -18,4 +18,6 @@ uv run python $T/evaluate.py --run "$D" --iterations 0,last --noise_std 1.0 --se
 uv run python $T/evaluate.py --run "$D" --do_nothing --detail_at none > $L/$NAME.nothing.log 2>&1; C=$?
 # The shove ladder: the two shoved commands at 0.5 to 2 m/s. Scorbi shrugs off anything under about 1 m/s (research 0006).
 uv run python $T/evaluate.py --run "$D" --iterations 0,50,100,200,last --shove_speeds 0.5,1.0,1.5,2.0 --detail_at last > $L/$NAME.shove.log 2>&1; S=$?
-echo "{\"run\": \"$(basename "$D")\", \"eval_exit\": $A, \"noise_exit\": $B, \"do_nothing_exit\": $C, \"shove_exit\": $S, \"finished_at\": \"$(date -u +%FT%TZ)\"}" > "$D/scorbi/eval_done.json"
+# Skill 5 with a real ball: a 500 g ball of 40 mm radius thrown at the body three times, at 3 to 6 m/s. All survive 3 m/s; most fall at 6 (research 0011).
+uv run python $T/evaluate.py --run "$D" --iterations 0,50,100,200,last --ball_speeds 3,4,5,6 --ball_mass 0.5 --ball_radius 0.04 --detail_at last > $L/$NAME.ball.log 2>&1; BL=$?
+echo "{\"run\": \"$(basename "$D")\", \"eval_exit\": $A, \"noise_exit\": $B, \"do_nothing_exit\": $C, \"shove_exit\": $S, \"ball_exit\": $BL, \"finished_at\": \"$(date -u +%FT%TZ)\"}" > "$D/scorbi/eval_done.json"
