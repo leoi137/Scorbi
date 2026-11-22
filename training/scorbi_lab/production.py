@@ -18,7 +18,7 @@ from isaaclab.utils import configclass
 import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .env_cfg import EventsCfg, ScorbiFlatEnvCfg
-from .ladder import Ladder1RewardsCfg, Ladder2BounceRewardsCfg, Ladder2RewardsCfg
+from .ladder import Ladder1RewardsCfg, Ladder2BounceFidgetRewardsCfg, Ladder2BounceRewardsCfg, Ladder2RewardsCfg
 
 # The group probes (Walk-G1 to G8) were queued while block D was undecided and keep rung 1's reward,
 # so that they stay comparable with each other. The production run has the chosen recipe (below).
@@ -207,4 +207,15 @@ class ProductionPlainEnvCfg(WalkEnvCfg):
     """
 
     rewards: Ladder2RewardsCfg = Ladder2RewardsCfg()
+    disturbances: int = 8
+
+
+@configclass
+class ProductionFidgetEnvCfg(WalkEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Production-Fidget``: the production recipe plus ``fidget_at_rest``, for skill 5.
+
+    ``production_a`` fell 26 times of 64 to the 4 m/s ball, over the limit of 4 set in research 0013, so this run is trained.
+    """
+
+    rewards: Ladder2BounceFidgetRewardsCfg = Ladder2BounceFidgetRewardsCfg()
     disturbances: int = 8

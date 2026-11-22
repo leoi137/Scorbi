@@ -197,6 +197,13 @@ class Ladder2FidgetRewardsCfg(Ladder2RewardsCfg):
 
 
 @configclass
+class Ladder2BounceFidgetRewardsCfg(Ladder2BounceRewardsCfg):
+    """Rung 2 + body bounce + fidget at rest: the production recipe with the term that braced best against the ball (research 0013)."""
+
+    fidget_at_rest = RewTerm(func=fidget_at_rest, weight=LADDER[5][2], params={"asset_cfg": SceneEntityCfg("robot", joint_names=LEG_JOINTS, preserve_order=True)})
+
+
+@configclass
 class Ladder2PairedRewardsCfg(Ladder2RewardsCfg):
     paired_steps = RewTerm(func=paired_steps, weight=EXTRA[2][2], params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")})
 
