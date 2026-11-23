@@ -136,11 +136,15 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
     for folder, e in evals.items():
         m = e["meta"]
         n, batch = m["iteration"], m["batch"]
-        if n not in saved or batch not in ("seeds", "noise", "do_nothing", "swarm", "extra", "ball"):
+        if n not in saved or batch not in ("seeds", "noise", "training_noise", "do_nothing", "swarm", "extra", "ball"):
+            continue
+        # A checkpoint has one 'noise' batch in the table. Where a batch with the checkpoint's own training noise
+        # exists (32 seeds), it is the one stored; the older fixed-noise batch (8 seeds) stays in Drive only.
+        if batch == "noise" and f"{n}_training_noise" in evals:
             continue
         # The table knows five batches. The ball episodes (skill 5) are stored as 'extra', like the shove ladder:
         # their cells are named forward_ball_400 and so on, their moments are tagged 'ball', and setup.ball has the ball.
-        tag, batch = batch, "extra" if batch == "ball" else batch
+        tag, batch = batch, "extra" if batch == "ball" else "noise" if batch == "training_noise" else batch
         poses = path_of(f"scorbi/eval/{folder}/poses.npz")
         detail_rel = f"scorbi/eval/{folder}/detail.npz"
         for ep in e["episodes"]:

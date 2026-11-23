@@ -3,10 +3,12 @@
 
     cd /workspace/isaaclab && uv run python /workspace/Scorbi/training/tools/evaluate.py \
         --run logs/rsl_rl/scorbi_flat/<run> [--iterations all|last|0,5,20] [--seeds 32] [--detail_at first,last]
-        [--noise_std 1.0] [--do_nothing] [--cells stand,forward_top --seeds 100 --batch swarm]
+        [--noise_std 1.0|training] [--do_nothing] [--cells stand,forward_top --seeds 100 --batch swarm]
 
 One launch rolls every listed checkpoint out on 13 fixed commands, with the same seeds every time,
-for 20 s, with no exploration noise unless --noise_std is given. An episode does not stop at a
+for 20 s, with no exploration noise unless --noise_std is given. With --noise_std training each
+checkpoint gets the noise it explored with in training (batch "training_noise"), which is what
+shows the stumbles between standing still and walking. An episode does not stop at a
 fall: the fall is timed and labelled, and the robot is recorded for the whole 20 s, so the footage
 shows what happens after it. Numbers such as speed, reward and torque count only up to the fall.
 
@@ -32,6 +34,7 @@ import contextlib
 import json
 import math
 import os
+import re
 import sys
 import time
 
@@ -88,10 +91,10 @@ ALIVE_LABELS = ("turtle", "faceplant", "worm", "timber")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--run", required=True, help="the run's folder under logs/rsl_rl/scorbi_flat/")
-parser.add_argument("--iterations", default="all", help="all, last, or a list such as 0,5,20")
+parser.add_argument("--iterations", default="all", help="all, last, or a list such as 0,5,20; 0-400 is every saved checkpoint in that range")
 parser.add_argument("--seeds", type=int, default=32, help="seeds per cell: 0 to seeds-1")
 parser.add_argument("--cells", default=None, help="a list of cells; default all 13")
-parser.add_argument("--noise_std", type=float, default=0.0, help="exploration noise on the actions; 0 = none")
+parser.add_argument("--noise_std", default="0", help="exploration noise on the actions: a number (0 = none), or 'training' for each checkpoint's own")
 parser.add_argument("--do_nothing", action="store_true", help="the control arm: zero actions instead of the policy")
 parser.add_argument("--batch", default=None, help="folder suffix; default from the options")
 parser.add_argument("--shove_speeds", default=None, help="a shove ladder, such as 0.2,0.3,0.5 (m/s): only the two shoved commands, once per speed; batch 'extra'")
@@ -117,12 +120,37 @@ def listed(text: str) -> list[int]:
         return []
     if text == "all":
         return list(saved)
-    return sorted({saved[0] if p == "first" else saved[-1] if p == "last" else int(p) for p in text.split(",")} & set(saved))  # unsaved iterations are dropped
+    picked: set[int] = set()
+    for p in text.split(","):
+        if "-" in p:  # a range, such as 0-400
+            low, high = (int(x) for x in p.split("-"))
+            picked |= {i for i in saved if low <= i <= high}
+        else:
+            picked.add(saved[0] if p == "first" else saved[-1] if p == "last" else int(p))
+    return sorted(picked & set(saved))  # unsaved iterations are dropped
+
+
+# The noise a checkpoint explored with in training: the mean action std that training logged after that
+# update (iterations.jsonl). Before any update it is the agent's starting value (params/agent.yaml).
+NOISE_FROM_TRAINING = args.noise_std == "training"
+FIXED_NOISE = 0.0 if NOISE_FROM_TRAINING else float(args.noise_std)
+training_noise: dict[int, float] = {}
+if NOISE_FROM_TRAINING:
+    for line in open(os.path.join(run, "scorbi", "iterations.jsonl")):
+        row = json.loads(line)
+        if (row.get("extras") or {}).get("action_std") is not None:
+            training_noise[row["iteration"]] = float(row["extras"]["action_std"])
+    start = re.search(r"init_std:\s*([0-9.eE+-]+)", open(os.path.join(run, "params", "agent.yaml")).read())
+    training_noise.setdefault(0, float(start.group(1)) if start else 1.0)
+
+
+def noise_std_at(iteration: int) -> float:
+    return training_noise[iteration] if NOISE_FROM_TRAINING else FIXED_NOISE
 
 
 iterations = [0] if args.do_nothing else listed(args.iterations)
 detail_at = set(listed(args.detail_at)) & set(iterations)
-batch = args.batch or ("do_nothing" if args.do_nothing else "noise" if args.noise_std else "extra" if args.shove_speeds else "ball" if args.ball_speeds else "")
+batch = args.batch or ("do_nothing" if args.do_nothing else "training_noise" if NOISE_FROM_TRAINING else "noise" if FIXED_NOISE else "extra" if args.shove_speeds else "ball" if args.ball_speeds else "")
 # name, command, shove speed in m/s (0 = none), skill
 cells = [(name, cmd, SHOVE_SPEED if shoved else 0.0, skill) for name, cmd, shoved, skill in CELLS if args.cells is None or name in args.cells.split(",")]
 if args.shove_speeds:  # the same two shoved commands at harder shoves: forward_shoved_30 is 0.30 m/s
@@ -322,6 +350,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
         measured_terms: dict[str, torch.Tensor] = {}
         torque_peak, torque_sum, at_limit = z(N, len(JOINTS)), z(N, len(JOINTS)), z(N, len(JOINTS))
         noise = torch.Generator(device=device).manual_seed(iteration * 7919 + 1)
+        noise_std = noise_std_at(iteration)
         previous = z(N, 12)
         pushes: dict[int, list[dict]] = {}
         began = time.time()
@@ -334,8 +363,8 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
         with torch.inference_mode():
             for t in range(1, STEPS + 1):
                 actions = z(N, 12) if policy is None else policy(obs)
-                if args.noise_std:
-                    actions = actions + args.noise_std * torch.randn(actions.shape, generator=noise, device=device)
+                if noise_std:
+                    actions = actions + noise_std * torch.randn(actions.shape, generator=noise, device=device)
                 if t == int(round(SHOVE_AT / 0.02)) + 1:
                     vel = d.root_com_vel_w.torch.clone()
                     vel[:, :2] += kick * shoved[:, None]
@@ -671,7 +700,7 @@ with launch_simulation(env_cfg, args), contextlib.ExitStack() as cleanup:
                             "fail_labels": {k: sum(e["fail_label"] == k for e in rows) for k in sorted({e["fail_label"] for e in rows if e["fail_label"]})}})
         meta = {
             "task": TASK, "run": os.path.basename(run), "iteration": iteration, "batch": batch or "seeds",
-            "checkpoint": os.path.basename(checkpoint) if checkpoint else None, "noise_std": args.noise_std, "seeds_per_cell": args.seeds,
+            "checkpoint": os.path.basename(checkpoint) if checkpoint else None, "noise_std": noise_std, "noise_from": "training" if NOISE_FROM_TRAINING else "fixed", "seeds_per_cell": args.seeds,
             "rate_hz": 50, "steps": STEPS, "joints": JOINTS, "feet": FEET, "quat_order": quat_order,
             "channels": {"root_pos": "metres; x and y from where the robot started, z above the floor", "root_quat": quat_order, "joint_pos": "radians, in the order of `joints`",
                          "foot_contact": "true when the foot presses on the floor with more than 0.3 N, in the order of `feet`", "length": "steps recorded", "fell_step": "the step of the fall, or -1"},
