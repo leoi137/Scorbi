@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Turn a recorded run into rows for the shared record (the training_* tables), and send them.
 
-    python training/tools/rows.py build <run folder> <Drive record .json> --session 2026-11-a --out rows.json
+    python training/tools/rows.py build <run folder> <Drive record .json> --session 2026-11-a --out rows.json [--slim]
     python training/tools/rows.py push rows.json            # needs SUPABASE_URL and SUPABASE_SECRET_KEY
 
 `build` reads only files and talks to nothing. A row points at other rows by name, in fields that
 start with "@": "@run" is a run's folder name, "@file" a Drive path, "@checkpoint" an iteration,
 "@episode" [batch, cell, seed]. `push` looks the ids up and upserts, so sending a run twice changes
 nothing. Run it in the orb, never on a rented GPU. Only files that are in Drive and verified get rows.
+
+`--slim` is for a database with little room. An episode keeps only the SLIM_NUMBERS in `numbers`, and an
+episode of the fixed-seed batch that is not a picked moment keeps none: with 32 seeds of 13 commands at every
+checkpoint those are nine rows in ten. The description of the ball goes once into the run's manifest
+(`recorded.ball`) instead of into every ball episode. Everything left out is in that checkpoint's episodes.json
+in Drive, beside its poses file, and sending the full rows later fills it in.
 """
 import argparse
 import json
@@ -22,6 +28,9 @@ import urllib.request
 GPU_USD_PER_HOUR = 0.174
 VAST_INSTANCE = 61888788
 CAMERAS = {"pet": "CAM_PET", "side": "CAM_SIDE", "top": "CAM_TOP", "fixed": "CAM_FIXED"}
+# What an episode row keeps in `numbers` when built with --slim: what a video's caption or a filter needs.
+SLIM_NUMBERS = ("achieved", "parked_share", "largest_tilt_deg", "time_upright_seconds", "along_command_10s_m", "fall_cause",
+                "torque_peak_max_n_m", "torque_mean_max_n_m", "share_of_time_at_limit_max")
 EPISODE_COLUMNS = ("cell", "seed", "duration_seconds", "success", "reward", "fell_at_seconds", "fail_label", "funny_score", "motor_mark", "pushes")
 
 
@@ -57,7 +66,7 @@ def file_kind(rel: str) -> str:
     return "other"
 
 
-def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dict:
+def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str, slim: bool = False) -> dict:
     run = run_dir.name
     scorbi = run_dir / "scorbi"
     manifest = json.loads((scorbi / "manifest.json").read_text())
@@ -83,11 +92,11 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
     all_verified = bool(in_drive) and all(f.get("verified") for f in record["files"])
     run_row = {
         "name": run, "session": session, "kind": kind, "skill_number": None, "skill": meta.get("skill", "WALK"),
-        "success_test": json.dumps(seeds_meta["tests"]) if seeds_meta else None,
+        "success_test": json.dumps(seeds_meta["tests"]) if seeds_meta and seeds_meta.get("tests") else None,  # the pilot predates the tests
         "@parent_run": meta["parent_run"] if has_parent else None,
         "config_diff": meta["config_diff"] if has_parent else None,
         "change_reason": meta["change_reason"] if has_parent else None,
-        "status": "done" if finished and done else "running",
+        "status": "done" if finished and (done or evals) else "running",  # the pilot predates eval_done.json
         "num_envs": manifest["num_envs"], "policy_observations": manifest["policy_observations"],
         "reward_config": json.dumps(rewards, indent=1),
         "reward_code": "\n\n".join(f"# {name}\n{code}" for name, code in manifest["reward_code"].items() if code),
@@ -129,12 +138,18 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
         n = c["iteration"]
         e = evals.get(str(n))
         policy = f"scorbi/export/{n}/policy.onnx"
-        checkpoints.append({"@run": run, "iteration": n, "gait": e["gait"] if e else None, "gait_stats": e["gait_stats"] if e else None, "swarm": False, "cheat_reason": None,
+        checkpoints.append({"@run": run, "iteration": n, "gait": e.get("gait") if e else None, "gait_stats": e.get("gait_stats") if e else None, "swarm": f"{n}_swarm" in evals, "cheat_reason": None,
                             "@model_file": path_of(f"scorbi/{c['file']}") if f"scorbi/{c['file']}" in in_drive else None,
                             "@policy_file": path_of(policy) if policy in in_drive else None})
     saved = {c["iteration"] for c in checkpoints}
+    unscored = []
     for folder, e in evals.items():
         m = e["meta"]
+        # The pilot run was recorded before the pass tests existed. An episode row must say passed or failed, so its
+        # episodes get no rows; the files they are in do, and the run's notes say where they are.
+        if e["episodes"] and "success" not in e["episodes"][0]:
+            unscored.append(folder)
+            continue
         n, batch = m["iteration"], m["batch"]
         if n not in saved or batch not in ("seeds", "noise", "training_noise", "do_nothing", "swarm", "extra", "ball"):
             continue
@@ -147,12 +162,20 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
         tag, batch = batch, "extra" if batch == "ball" else "noise" if batch == "training_noise" else batch
         poses = path_of(f"scorbi/eval/{folder}/poses.npz")
         detail_rel = f"scorbi/eval/{folder}/detail.npz"
+        picked = {(mo["cell"], mo["seed"]) for mo in e["moments"]}
+        if slim and m.get("ball"):
+            run_row["manifest"]["recorded"]["ball"] = m["ball"]
         for ep in e["episodes"]:
             row = {k: lean(ep[k]) for k in EPISODE_COLUMNS}
             row |= {"@run": run, "@checkpoint": n, "batch": batch, "@poses_file": poses, "poses_index": ep["index"], "terrain_type": "flat", "terrain_level": None,
                     "numbers": lean({k: v for k, v in ep.items() if k not in EPISODE_COLUMNS and k not in ("index", "command", "skill", "torque_peak_n_m", "torque_mean_n_m")}
                                     | {"torque_peak_max_n_m": max(ep["torque_peak_n_m"][:12]), "torque_mean_max_n_m": max(ep["torque_mean_n_m"][:12])}),
                     "setup": {"command": ep["command"], "noise_std": m["noise_std"], "skill": ep.get("skill")} | ({"ball": m["ball"]} if m.get("ball") else {})}
+            if slim:
+                keep = batch != "seeds" or (ep["cell"], ep["seed"]) in picked
+                row["numbers"] = ({k: v for k, v in row["numbers"].items() if k in SLIM_NUMBERS} if keep else {}) | {"slim": True}
+                if "ball" in row["setup"]:
+                    row["setup"]["ball"] = {k: m["ball"][k] for k in ("mass_kg", "radius_m", "hits_at_seconds")}
             episodes.append(row)
         for mo in e["moments"]:
             detail = mo.get("detail_index") is not None and detail_rel in in_drive
@@ -163,12 +186,23 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
                             "@states_file": path_of(detail_rel) if detail else None, "states_index": mo["detail_index"] if detail else None})
 
     renders = []
+    recorded = {(e["@checkpoint"], e["batch"], e["cell"], e["seed"]) for e in episodes}
     for rel in in_drive:
         found = re.fullmatch(r"scorbi/previews/iter(\d+)_([a-z0-9_]+?)_seed(\d+)_([a-z]+)\.mp4", rel)
         if found and found.group(4) in CAMERAS:
             cell = found.group(2)
             batch = "extra" if re.search(r"_(ball|shoved)_\d+$", cell) else "seeds"  # the ball and the shove ladder are stored as 'extra'
-            renders.append({"@run": run, "@checkpoint": int(found.group(1)), "@episode": [batch, cell, int(found.group(3))], "camera": CAMERAS[found.group(4)], "kind": "preview", "@file": path_of(rel)})
+            episode = (int(found.group(1)), batch, cell, int(found.group(3)))
+            if episode not in recorded:  # a clip whose name matches no recorded episode gets a file row only
+                print(f"no render row for {rel}: no episode {episode}", file=sys.stderr)
+                continue
+            renders.append({"@run": run, "@checkpoint": episode[0], "@episode": [batch, cell, episode[3]], "camera": CAMERAS[found.group(4)], "kind": "preview", "@file": path_of(rel)})
+    if unscored:
+        clips = sorted(rel for rel in in_drive if rel.startswith("scorbi/previews/"))
+        run_row["notes"] = ((run_row["notes"] + ". ") if run_row["notes"] else "") + (
+            f"The pilot run, recorded before the pass tests existed: its episodes have no pass or fail, so they have no rows in training_episodes. "
+            f"They are in episodes.json and poses.npz (50 Hz) under scorbi/eval/{{{', '.join(unscored)}}}/ of this run's Drive folder."
+            + (f" Clips: {', '.join(clips)}." if clips else ""))
     return {"training_runs": [run_row], "training_files": files, "training_iterations": iterations, "training_checkpoints": checkpoints,
             "training_episodes": episodes, "training_moments": moments, "training_renders": renders}
 
@@ -177,7 +211,8 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str) -> dic
 
 
 def api(method: str, table: str, query: str = "", body=None, prefer: str = ""):
-    url = os.environ["SUPABASE_URL"].rstrip("/") + f"/rest/v1/{table}" + (f"?{query}" if query else "")
+    # SUPABASE_REST_PATH is "" when testing against a bare PostgREST, which serves tables at the root.
+    url = os.environ["SUPABASE_URL"].rstrip("/") + os.environ.get("SUPABASE_REST_PATH", "/rest/v1") + f"/{table}" + (f"?{query}" if query else "")
     key = os.environ["SUPABASE_SECRET_KEY"]
     headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     if prefer:
@@ -196,6 +231,17 @@ def upsert(table: str, rows: list[dict], conflict: str, returning: str) -> list[
     for i in range(0, len(rows), 500):
         out += api("POST", table, f"on_conflict={conflict}&select={returning}", rows[i : i + 500], "resolution=merge-duplicates,return=representation")
     return out
+
+
+def fetch_all(table: str, query: str) -> list[dict]:
+    """Every matching row. Supabase returns at most 1,000 rows a request, so this pages by id."""
+    out, last = [], 0
+    while True:
+        page = api("GET", table, f"{query}&id=gt.{last}&order=id&limit=1000")
+        out += page
+        if len(page) < 1000:
+            return out
+        last = page[-1]["id"]
 
 
 def push(rows: dict) -> None:
@@ -219,13 +265,16 @@ def push(rows: dict) -> None:
                   "checkpoint_id,batch,cell,seed", "id,checkpoint_id,batch,cell,seed")
     episodes = {(e["checkpoint_id"], e["batch"], e["cell"], e["seed"]): e["id"] for e in sent}
     episode_of = lambda row: episodes[(checkpoints[row["@checkpoint"]], *row["@episode"])]  # noqa: E731
-    # Moments and renders have no natural key: a run's are sent once, and skipped if any are already there.
+    # Moments have no unique key in the table. One is taken as sent already when its episode has a moment of the
+    # same kind over the same seconds, so sending a run again, or after a send that broke off, adds only what is missing.
     ids = ",".join(str(i) for i in checkpoints.values())
-    made = api("GET", "training_moments", f"select=id,episode_id&checkpoint_id=in.({ids})&limit=100000")
-    if not made:
-        batch = [plain(m) | {"checkpoint_id": checkpoints[m["@checkpoint"]], "episode_id": episode_of(m), "states_file_id": files.get(m["@states_file"])} for m in rows["training_moments"]]
-        for i in range(0, len(batch), 500):
-            made += api("POST", "training_moments", "select=id,episode_id", batch[i : i + 500], "return=representation")
+    made = fetch_all("training_moments", f"select=id,episode_id,kind,start_seconds,end_seconds&checkpoint_id=in.({ids})")
+    key = lambda m: (m["episode_id"], m["kind"], round(float(m["start_seconds"]), 3), round(float(m["end_seconds"]), 3))  # noqa: E731
+    there = {key(m) for m in made}
+    batch = [plain(m) | {"checkpoint_id": checkpoints[m["@checkpoint"]], "episode_id": episode_of(m), "states_file_id": files.get(m["@states_file"])} for m in rows["training_moments"]]
+    batch = [m for m in batch if key(m) not in there]
+    for i in range(0, len(batch), 500):
+        made += api("POST", "training_moments", "select=id,episode_id", batch[i : i + 500], "return=representation")
     by_episode = {m["episode_id"]: m["id"] for m in made}
     renders = []
     for r in rows["training_renders"]:
@@ -247,11 +296,12 @@ if __name__ == "__main__":
     b.add_argument("record")
     b.add_argument("--session", required=True)
     b.add_argument("--out", required=True)
+    b.add_argument("--slim", action="store_true", help="keep only SLIM_NUMBERS in each episode's numbers")
     p = sub.add_parser("push")
     p.add_argument("rows")
     args = parser.parse_args()
     if args.command == "build":
-        rows = build(pathlib.Path(args.run_dir).resolve(), pathlib.Path(args.record), args.session)
+        rows = build(pathlib.Path(args.run_dir).resolve(), pathlib.Path(args.record), args.session, args.slim)
         pathlib.Path(args.out).write_text(json.dumps(rows))
         print(f"{args.out}: " + ", ".join(f"{len(v)} {k.removeprefix('training_')}" for k, v in rows.items()))
     else:
