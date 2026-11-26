@@ -1,6 +1,6 @@
 # 0022 · The production walk at 0.8 mph: one run, predictions
 
-26 November 2026, 10:45 UTC. Written before the run starts. Instance 62662296.
+26 November 2026, 10:30 UTC. Written before the run starts. Instance 62662296.
 
 ## Why
 
