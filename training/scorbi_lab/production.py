@@ -247,6 +247,19 @@ class ProductionFastLimitEnvCfg(ProductionFastEnvCfg):
 
 
 @configclass
+class ProductionTopLimitEnvCfg(ProductionFastLimitEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Production-Top-Limit``: forward commands up to 0.50 m/s (1.1 mph), inside the servo's speed?
+
+    The one change against ``Production-Fast-Limit`` is the top of the forward command range, 0.50 m/s for 0.40
+    (research 0034). ``top_speed_s1`` walked 0.45 m/s only with leg joints over the servo's 9.6 rad/s (0026).
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.commands.base_velocity.ranges.lin_vel_x = (FAST_FORWARD[0], 0.50)
+
+
+@configclass
 class RemoteEnvCfg(ProductionFastLimitEnvCfg):
     """Task ``Scorbi-Velocity-Flat-Remote``: every direction faster, for a remote control (research 0026).
 

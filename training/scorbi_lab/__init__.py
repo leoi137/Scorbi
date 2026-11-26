@@ -27,6 +27,7 @@ _VARIANTS += [("Scorbi-Velocity-Flat-Production-Plain", "production:ProductionPl
 _VARIANTS += [("Scorbi-Velocity-Flat-Production-Fidget", "production:ProductionFidgetEnvCfg")]  # for skill 5: the recipe + fidget at rest
 _VARIANTS += [("Scorbi-Velocity-Flat-Production-Fast", "production:ProductionFastEnvCfg")]  # the plain production recipe, forward commands up to 0.40 m/s
 _VARIANTS += [("Scorbi-Velocity-Flat-Production-Fast-Limit", "production:ProductionFastLimitEnvCfg")]  # the same with a price on leg joint speed over the servo's
+_VARIANTS += [("Scorbi-Velocity-Flat-Production-Top-Limit", "production:ProductionTopLimitEnvCfg")]  # Production-Fast-Limit told to walk up to 0.50 m/s (1.1 mph)
 _VARIANTS += [("Scorbi-Velocity-Flat-Remote", "production:RemoteEnvCfg")]  # Production-Fast-Limit with every direction faster, for a remote control
 # The fast-walk probes: forward commands up to 0.40 m/s (fast.py).
 _VARIANTS += [("Scorbi-Velocity-Flat-Fast", "fast:FastEnvCfg"), ("Scorbi-Velocity-Flat-Fast-Narrow", "fast:FastNarrowEnvCfg")]
