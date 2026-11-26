@@ -37,3 +37,26 @@ class FastNarrowEnvCfg(FastEnvCfg):
     """Task ``Scorbi-Velocity-Flat-Fast-Narrow``: the same with the tracking width every other run has (0.075 m/s)."""
 
     lin_std: float = 0.075
+
+
+@configclass
+class TopSpeedEnvCfg(FastNarrowEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-TopSpeed``: forward commands up to 0.55 m/s (1.2 mph), to find the ceiling (research 0023)."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.12, 0.55)
+
+
+@configclass
+class AllFastEnvCfg(FastNarrowEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-AllFast``: every direction faster, for the remote control (research 0023).
+
+    Forward and backward to 0.40 m/s (0.9 mph), sideways to 0.30 m/s (0.67 mph), turning to 2.5 rad/s.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.40, 0.40)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.30, 0.30)
+        self.commands.base_velocity.ranges.ang_vel_z = (-2.5, 2.5)

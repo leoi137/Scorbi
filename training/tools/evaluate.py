@@ -5,8 +5,8 @@
         --run logs/rsl_rl/scorbi_flat/<run> [--iterations all|last|0,5,20] [--seeds 32] [--detail_at first,last]
         [--noise_std 1.0|training] [--do_nothing] [--cells stand,forward_top --seeds 100 --batch swarm]
 
-One launch rolls every listed checkpoint out on 13 fixed commands (16 for a run trained to walk
-faster: forward at 0.7 and 0.8 mph are added), with the same seeds every time,
+One launch rolls every listed checkpoint out on 13 fixed commands (more for a run trained on wider
+command ranges: every FAST_CELLS command inside its ranges is added), with the same seeds every time,
 for 20 s, with no exploration noise unless --noise_std is given. With --noise_std training each
 checkpoint gets the noise it explored with in training (batch "training_noise"), which is what
 shows the stumbles between standing still and walking. An episode does not stop at a
@@ -95,6 +95,17 @@ FAST_CELLS = [
     ("forward_07mph", (0.31, 0.0, 0.0), False, "FAST WALK"),
     ("forward_08mph", (0.36, 0.0, 0.0), False, "FAST WALK"),
     ("forward_08mph_shoved", (0.36, 0.0, 0.0), True, "5 THE SHOVE"),  # so the shove and ball ladders also hit the fast walk (research 0022)
+    # Past 0.8 mph, and the other directions faster (research 0023). A cell is rolled out only when its
+    # command is inside the range the run trained on.
+    ("forward_10mph", (0.45, 0.0, 0.0), False, "FAST WALK"),
+    ("forward_12mph", (0.54, 0.0, 0.0), False, "FAST WALK"),
+    ("backward_07mph", (-0.31, 0.0, 0.0), False, "6 MOONWALK"),
+    ("sideways_left_05mph", (0.0, 0.22, 0.0), False, "7 CRAB WALK"),
+    ("sideways_right_05mph", (0.0, -0.22, 0.0), False, "7 CRAB WALK"),
+    ("turn_left_fast", (0.0, 0.0, 2.0), False, "4 SPIN"),
+    ("turn_right_fast", (0.0, 0.0, -2.0), False, "4 SPIN"),
+    ("curve_left_fast", (0.31, 0.0, 1.5), False, "16 FOLLOW ME"),
+    ("diagonal_fast", (0.25, 0.15, 0.0), False, "Skill Wall"),
 ]
 ALIVE_LABELS = ("turtle", "faceplant", "worm", "timber")
 
@@ -157,8 +168,14 @@ def noise_std_at(iteration: int) -> float:
     return training_noise[iteration] if NOISE_FROM_TRAINING else FIXED_NOISE
 
 
-top_forward = ((manifest.get("command_ranges") or {}).get("lin_vel_x") or [0.0, 0.0])[1]
-CELLS = CELLS + [c for c in FAST_CELLS if c[1][0] <= top_forward]
+trained = manifest.get("command_ranges") or {}
+
+
+def inside_trained(cmd) -> bool:
+    return all((trained.get(axis) or [0.0, 0.0])[0] <= value <= (trained.get(axis) or [0.0, 0.0])[1] for axis, value in zip(("lin_vel_x", "lin_vel_y", "ang_vel_z"), cmd))
+
+
+CELLS = CELLS + [c for c in FAST_CELLS if inside_trained(c[1])]
 
 iterations = [0] if args.do_nothing else listed(args.iterations)
 detail_at = set(listed(args.detail_at)) & set(iterations)
