@@ -117,6 +117,7 @@ parser.add_argument("--cells", default=None, help="a list of cells; default all"
 parser.add_argument("--noise_std", default="0", help="exploration noise on the actions: a number (0 = none), or 'training' for each checkpoint's own")
 parser.add_argument("--do_nothing", action="store_true", help="the control arm: zero actions instead of the policy")
 parser.add_argument("--batch", default=None, help="folder suffix; default from the options")
+parser.add_argument("--sweep", default=None, help="forward speeds in m/s, such as 0.09,0.18,0.27: one straight-line command per speed (forward_sweep_018 is 0.18 m/s; a negative speed is backward_sweep_018), instead of the usual cells; batch 'sweep' (research 0032)")
 parser.add_argument("--shove_speeds", default=None, help="a shove ladder, such as 0.2,0.3,0.5 (m/s): only the two shoved commands, once per speed; batch 'extra'")
 parser.add_argument("--ball_speeds", default=None, help="skill 5 with a real ball, such as 3,5,7 (m/s): the two shoved commands, three hits each from seeded sides; batch 'ball'")
 parser.add_argument("--ball_mass", type=float, default=0.2, help="kg")
@@ -179,9 +180,11 @@ CELLS = CELLS + [c for c in FAST_CELLS if inside_trained(c[1])]
 
 iterations = [0] if args.do_nothing else listed(args.iterations)
 detail_at = set(listed(args.detail_at)) & set(iterations)
-batch = args.batch or ("do_nothing" if args.do_nothing else "training_noise" if NOISE_FROM_TRAINING else "noise" if FIXED_NOISE else "extra" if args.shove_speeds else "ball" if args.ball_speeds else "")
+batch = args.batch or ("do_nothing" if args.do_nothing else "training_noise" if NOISE_FROM_TRAINING else "noise" if FIXED_NOISE else "sweep" if args.sweep else "extra" if args.shove_speeds else "ball" if args.ball_speeds else "")
 # name, command, shove speed in m/s (0 = none), skill
 cells = [(name, cmd, SHOVE_SPEED if shoved else 0.0, skill) for name, cmd, shoved, skill in CELLS if args.cells is None or name in args.cells.split(",")]
+if args.sweep:  # how well a speed between the tested ones is held: the remote control's question
+    cells = [(f"{'forward' if float(v) >= 0 else 'backward'}_sweep_{round(abs(float(v)) * 100):03d}", (float(v), 0.0, 0.0), 0.0, "2 FIRST STEPS" if float(v) >= 0 else "6 MOONWALK") for v in args.sweep.split(",")]
 if args.shove_speeds:  # the same two shoved commands at harder shoves: forward_shoved_30 is 0.30 m/s
     cells = [(f"{name}_{round(float(v) * 100):02d}", cmd, float(v), skill) for v in args.shove_speeds.split(",") for name, cmd, shoved, skill in CELLS if shoved]
 BALL = bool(args.ball_speeds)
