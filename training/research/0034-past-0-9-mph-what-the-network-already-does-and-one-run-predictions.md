@@ -6,7 +6,8 @@
 
 0032 said `production_fast_limit_a` was trained to 0.36 m/s and that 0.40 m/s was outside its training. Wrong:
 its forward commands go to 0.40 m/s (`FAST_FORWARD` in `fast.py`). 0.36 m/s is the fastest command the usual
-evaluation tests. 0033 has the right version. I told the owner the wrong one and corrected it.
+evaluation tests. 0033 has the right version. (An earlier version of this note said I had told the owner the
+wrong one. I had not; it was only in 0032 and in my log.)
 
 ## Told to go faster than it was trained (`production_fast_limit_a`, iteration 6,000, batch `sweep_top`)
 
