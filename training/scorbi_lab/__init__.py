@@ -25,6 +25,7 @@ _VARIANTS += [(f"Scorbi-Velocity-Flat-Walk-G{n}", f"production:WalkG{n}EnvCfg") 
 _VARIANTS += [("Scorbi-Velocity-Flat-Production", "production:ProductionEnvCfg")]  # block E: the chosen recipe, every group that passed
 _VARIANTS += [("Scorbi-Velocity-Flat-Production-Plain", "production:ProductionPlainEnvCfg")]  # the comparison: rung 2 alone, every group
 _VARIANTS += [("Scorbi-Velocity-Flat-Production-Fidget", "production:ProductionFidgetEnvCfg")]  # for skill 5: the recipe + fidget at rest
+_VARIANTS += [("Scorbi-Velocity-Flat-Production-Fast", "production:ProductionFastEnvCfg")]  # the plain production recipe, forward commands up to 0.40 m/s
 # The fast-walk probes: forward commands up to 0.40 m/s (fast.py).
 _VARIANTS += [("Scorbi-Velocity-Flat-Fast", "fast:FastEnvCfg"), ("Scorbi-Velocity-Flat-Fast-Narrow", "fast:FastNarrowEnvCfg")]
 for _id, _cfg in _VARIANTS:

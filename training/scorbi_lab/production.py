@@ -18,6 +18,7 @@ from isaaclab.utils import configclass
 import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .env_cfg import EventsCfg, ScorbiFlatEnvCfg
+from .fast import FAST_FORWARD
 from .ladder import Ladder1RewardsCfg, Ladder2BounceFidgetRewardsCfg, Ladder2BounceRewardsCfg, Ladder2RewardsCfg
 
 # The group probes (Walk-G1 to G8) were queued while block D was undecided and keep rung 1's reward,
@@ -219,3 +220,16 @@ class ProductionFidgetEnvCfg(WalkEnvCfg):
 
     rewards: Ladder2BounceFidgetRewardsCfg = Ladder2BounceFidgetRewardsCfg()
     disturbances: int = 8
+
+
+@configclass
+class ProductionFastEnvCfg(ProductionPlainEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Production-Fast``: the plain production recipe told to walk up to 0.40 m/s (0.9 mph).
+
+    The one change against ``Production-Plain`` is the forward command range, as in the fast-walk probes
+    (fast.py, research 0020 and 0021). The disturbances keep their sizes.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.commands.base_velocity.ranges.lin_vel_x = FAST_FORWARD

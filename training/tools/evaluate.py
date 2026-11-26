@@ -5,7 +5,7 @@
         --run logs/rsl_rl/scorbi_flat/<run> [--iterations all|last|0,5,20] [--seeds 32] [--detail_at first,last]
         [--noise_std 1.0|training] [--do_nothing] [--cells stand,forward_top --seeds 100 --batch swarm]
 
-One launch rolls every listed checkpoint out on 13 fixed commands (15 for a run trained to walk
+One launch rolls every listed checkpoint out on 13 fixed commands (16 for a run trained to walk
 faster: forward at 0.7 and 0.8 mph are added), with the same seeds every time,
 for 20 s, with no exploration noise unless --noise_std is given. With --noise_std training each
 checkpoint gets the noise it explored with in training (batch "training_noise"), which is what
@@ -88,11 +88,13 @@ CELLS = [
     ("forward_shoved", (0.08, 0.0, 0.0), True, "5 THE SHOVE"),
     ("stand_shoved", (0.0, 0.0, 0.0), True, "5 THE SHOVE"),
 ]
-# A run trained for faster forward commands is also rolled out at 0.7 and 0.8 mph (research 0020).
+# A run trained for faster forward commands is also rolled out at 0.7 and 0.8 mph (research 0020),
+# and shoved while walking at 0.8 mph.
 # They come after the 13, so those keep their places in every file.
 FAST_CELLS = [
     ("forward_07mph", (0.31, 0.0, 0.0), False, "FAST WALK"),
     ("forward_08mph", (0.36, 0.0, 0.0), False, "FAST WALK"),
+    ("forward_08mph_shoved", (0.36, 0.0, 0.0), True, "5 THE SHOVE"),  # so the shove and ball ladders also hit the fast walk (research 0022)
 ]
 ALIVE_LABELS = ("turtle", "faceplant", "worm", "timber")
 
@@ -100,7 +102,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--run", required=True, help="the run's folder under logs/rsl_rl/scorbi_flat/")
 parser.add_argument("--iterations", default="all", help="all, last, or a list such as 0,5,20; 0-400 is every saved checkpoint in that range")
 parser.add_argument("--seeds", type=int, default=32, help="seeds per cell: 0 to seeds-1")
-parser.add_argument("--cells", default=None, help="a list of cells; default all 13")
+parser.add_argument("--cells", default=None, help="a list of cells; default all")
 parser.add_argument("--noise_std", default="0", help="exploration noise on the actions: a number (0 = none), or 'training' for each checkpoint's own")
 parser.add_argument("--do_nothing", action="store_true", help="the control arm: zero actions instead of the policy")
 parser.add_argument("--batch", default=None, help="folder suffix; default from the options")
