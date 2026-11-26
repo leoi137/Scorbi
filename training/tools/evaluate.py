@@ -98,6 +98,7 @@ FAST_CELLS = [
     # Past 0.8 mph, and the other directions faster (research 0023). A cell is rolled out only when its
     # command is inside the range the run trained on.
     ("forward_10mph", (0.45, 0.0, 0.0), False, "FAST WALK"),
+    ("forward_10mph_shoved", (0.45, 0.0, 0.0), True, "5 THE SHOVE"),  # shoves and the ball at 1.0 mph, for runs trained that fast (research 0034)
     ("forward_12mph", (0.54, 0.0, 0.0), False, "FAST WALK"),
     ("backward_07mph", (-0.31, 0.0, 0.0), False, "6 MOONWALK"),
     ("sideways_left_05mph", (0.0, 0.22, 0.0), False, "7 CRAB WALK"),

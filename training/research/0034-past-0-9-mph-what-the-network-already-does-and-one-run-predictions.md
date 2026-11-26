@@ -46,3 +46,14 @@ I am giving these higher than my habit today (0033: 22 of 26 held at 50% to 70%)
 
 Wrong would be: trained on commands up to 0.50 m/s it spends the torque it has on the top speed, and the slow
 walk, the stand or the shoves get worse than `production_fast_limit_a`'s.
+
+## Added at 16:49 UTC, with the run at about iteration 1,800 and nothing of it looked at
+
+The usual evaluation shoves the slow walk, the stand and the 0.8 mph walk. So that this run is also shoved and
+hit at 1.0 mph, the evaluation gets one more command, `forward_10mph_shoved` (0.45 m/s), for runs trained that
+fast. The run's evaluation therefore uses a later commit than the one its manifest names for training.
+
+| Prediction for iteration 6,000 | How sure |
+|---|---|
+| Shoved at 1.0 m/s while walking at 0.45 m/s, 24 or more of 32 stay up. | 70% |
+| Shoved at 1.5 m/s while walking at 0.45 m/s, fewer than 18 of 32 stay up (`production_fast_limit_a` at 0.36 m/s: 18). | 55% |
