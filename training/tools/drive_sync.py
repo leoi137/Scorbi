@@ -173,7 +173,7 @@ def send_stream(host: str, remote: str, name: str, size: int, parent: str, befor
         body = _Hashed(source.stdout)
         try:
             req = urllib.request.Request(h["Location"], data=body if size else b"", method="PUT", headers={**AUTH, "Content-Length": str(size)})
-            with urllib.request.urlopen(req, timeout=1800) as r:
+            with urllib.request.urlopen(req, timeout=180) as r:
                 made = json.loads(r.read())
             if source.wait() != 0 or body.count != size:
                 raise OSError(f"read {body.count} of {size} bytes of {remote}")
