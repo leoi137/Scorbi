@@ -5,7 +5,8 @@
         --run logs/rsl_rl/scorbi_flat/<run> [--iterations all|last|0,5,20] [--seeds 32] [--detail_at first,last]
         [--noise_std 1.0|training] [--do_nothing] [--cells stand,forward_top --seeds 100 --batch swarm]
 
-One launch rolls every listed checkpoint out on 13 fixed commands, with the same seeds every time,
+One launch rolls every listed checkpoint out on 13 fixed commands (15 for a run trained to walk
+faster: forward at 0.7 and 0.8 mph are added), with the same seeds every time,
 for 20 s, with no exploration noise unless --noise_std is given. With --noise_std training each
 checkpoint gets the noise it explored with in training (batch "training_noise"), which is what
 shows the stumbles between standing still and walking. An episode does not stop at a
@@ -87,6 +88,12 @@ CELLS = [
     ("forward_shoved", (0.08, 0.0, 0.0), True, "5 THE SHOVE"),
     ("stand_shoved", (0.0, 0.0, 0.0), True, "5 THE SHOVE"),
 ]
+# A run trained for faster forward commands is also rolled out at 0.7 and 0.8 mph (research 0020).
+# They come after the 13, so those keep their places in every file.
+FAST_CELLS = [
+    ("forward_07mph", (0.31, 0.0, 0.0), False, "FAST WALK"),
+    ("forward_08mph", (0.36, 0.0, 0.0), False, "FAST WALK"),
+]
 ALIVE_LABELS = ("turtle", "faceplant", "worm", "timber")
 
 parser = argparse.ArgumentParser()
@@ -147,6 +154,9 @@ if NOISE_FROM_TRAINING:
 def noise_std_at(iteration: int) -> float:
     return training_noise[iteration] if NOISE_FROM_TRAINING else FIXED_NOISE
 
+
+top_forward = ((manifest.get("command_ranges") or {}).get("lin_vel_x") or [0.0, 0.0])[1]
+CELLS = CELLS + [c for c in FAST_CELLS if c[1][0] <= top_forward]
 
 iterations = [0] if args.do_nothing else listed(args.iterations)
 detail_at = set(listed(args.detail_at)) & set(iterations)

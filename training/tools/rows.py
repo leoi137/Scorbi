@@ -25,8 +25,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-GPU_USD_PER_HOUR = 0.174
-VAST_INSTANCE = 61888788
+GPU_USD_PER_HOUR = float(os.environ.get("GPU_USD_PER_HOUR", 0.174))
+VAST_INSTANCE = int(os.environ.get("VAST_INSTANCE", 61888788))  # the instance the run trained on; set VAST_INSTANCE for a later one
 CAMERAS = {"pet": "CAM_PET", "side": "CAM_SIDE", "top": "CAM_TOP", "fixed": "CAM_FIXED"}
 # What an episode row keeps in `numbers` when built with --slim: what a video's caption or a filter needs.
 SLIM_NUMBERS = ("achieved", "parked_share", "largest_tilt_deg", "time_upright_seconds", "along_command_10s_m", "fall_cause",

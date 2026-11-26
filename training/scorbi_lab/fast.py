@@ -1,0 +1,39 @@
+"""The fast-walk probes: how fast can Scorbi walk? (research 0020)
+
+Every run so far was told to walk at 0.15 m/s forward at most (0.34 mph), because the website asks for
+0.12 m/s. These tasks raise the forward command to 0.40 m/s (0.9 mph), so that 0.31 and 0.36 m/s
+(0.7 and 0.8 mph) are inside the trained range. Everything else is rung 2 of the reward ladder, the
+recipe the website candidate was trained with, with no disturbances.
+
+The width of the tracking reward is the open choice. The plan's rule (half the top command) gives
+0.20 m/s, and a reward that wide let the stock-reward run stand still when told to stand (research
+0007). The two tasks differ only in that width.
+"""
+
+from isaaclab.utils import configclass
+
+from .env_cfg import ScorbiFlatEnvCfg
+from .ladder import Ladder2RewardsCfg
+
+FAST_FORWARD = (-0.12, 0.40)
+"""Forward command range [m/s]. Backward, sideways and turning are unchanged."""
+
+
+@configclass
+class FastEnvCfg(ScorbiFlatEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Fast``: rung 2, forward commands up to 0.40 m/s, tracking width 0.15 m/s."""
+
+    rewards: Ladder2RewardsCfg = Ladder2RewardsCfg()
+    lin_std: float = 0.15
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.commands.base_velocity.ranges.lin_vel_x = FAST_FORWARD
+        self.rewards.track_twist_exp.params["lin_std"] = self.lin_std
+
+
+@configclass
+class FastNarrowEnvCfg(FastEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Fast-Narrow``: the same with the tracking width every other run has (0.075 m/s)."""
+
+    lin_std: float = 0.075
