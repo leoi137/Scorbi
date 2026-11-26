@@ -66,6 +66,8 @@ CAMERAS = {
     "side": (0.80, 90.0, -6.0, True),
     "top": (0.90, 90.0, -89.0, True),
     "fixed": (1.10, 145.0, -16.0, False),
+    # side-on and still, for a wide frame: the walk crosses the picture, so two clips with the same --hold compare speeds
+    "race": (1.10, 90.0, -12.0, False),
 }
 
 parser = argparse.ArgumentParser()
@@ -77,6 +79,7 @@ parser.add_argument("--size", default="1080x1920")
 parser.add_argument("--fps", type=int, default=30)
 parser.add_argument("--start", type=float, default=0.0)
 parser.add_argument("--end", type=float, default=None)
+parser.add_argument("--hold", type=float, default=0.0, help="for a camera that stays put: frame a path at least this long [m], so two clips can share one framing")
 parser.add_argument("--still", type=float, default=None, help="write one PNG of this moment (seconds) instead of a video")
 args = parser.parse_args()
 
@@ -114,6 +117,9 @@ if not follows:
     # A camera that stays put must hold the whole clip: aim at the middle of the robot's path and
     # stand back until every point of the path, plus the robot's own width, is inside the frame.
     path = np.column_stack([pos[first : last + 1, :2], np.full(last + 1 - first, 0.06)])
+    travelled = float(np.linalg.norm(path[-1, :2] - path[0, :2]))
+    if travelled > 1e-3 and travelled < args.hold:  # stretch the framed path along the walk to the asked length, from the same start
+        path = np.vstack([path, np.append(path[0, :2] + (path[-1, :2] - path[0, :2]) * args.hold / travelled, 0.06)])
     look[:2] = (path[:, :2].min(axis=0) + path[:, :2].max(axis=0)) / 2
     cam.lookat[:] = look
     az, el = math.radians(cam.azimuth), math.radians(cam.elevation)
