@@ -19,7 +19,7 @@ import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .env_cfg import EventsCfg, ScorbiFlatEnvCfg
 from .fast import FAST_FORWARD
-from .ladder import Ladder1RewardsCfg, Ladder2BounceFidgetRewardsCfg, Ladder2BounceRewardsCfg, Ladder2RewardsCfg
+from .ladder import Ladder1RewardsCfg, Ladder2BounceFidgetRewardsCfg, Ladder2BounceRewardsCfg, Ladder2RewardsCfg, Ladder2SpeedRewardsCfg
 
 # The group probes (Walk-G1 to G8) were queued while block D was undecided and keep rung 1's reward,
 # so that they stay comparable with each other. The production run has the chosen recipe (below).
@@ -233,3 +233,14 @@ class ProductionFastEnvCfg(ProductionPlainEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.commands.base_velocity.ranges.lin_vel_x = FAST_FORWARD
+
+
+@configclass
+class ProductionFastLimitEnvCfg(ProductionFastEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Production-Fast-Limit``: ``Production-Fast`` with a price on leg joint speed over the servo's.
+
+    ``production_fast_a`` walks 0.36 m/s with its hip-lift joints over the servo's 9.6 rad/s for 22% of the time
+    (research 0024). The one change is the reward term ``leg_speed_over``.
+    """
+
+    rewards: Ladder2SpeedRewardsCfg = Ladder2SpeedRewardsCfg()

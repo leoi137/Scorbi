@@ -14,7 +14,7 @@ from isaaclab.utils import configclass
 import isaaclab_tasks.core.velocity.mdp as mdp
 
 from .env_cfg import RewardsCfg, ScorbiFlatEnvCfg
-from .robot import LEG_JOINTS
+from .robot import LEG_JOINTS, MOTOR
 
 FOOT_AT_REST = 0.0125  # m: height of a foot's centre when it stands on the floor (measured)
 FOOT_LIFT = 0.016  # m: how high the website's scripted gait lifts a foot
@@ -109,6 +109,16 @@ def paired_steps(env, command_name: str = "base_velocity", sensor_cfg: SceneEnti
     return torch.sum((air.clamp(max=target) - shortest) * landed * stood, dim=1) * moving
 
 
+def leg_speed_over(env, asset_cfg: SceneEntityCfg = LEGS, limit: float = 0.9 * MOTOR["velocity"]) -> torch.Tensor:
+    """How much faster than `limit` each leg joint turns, squared and summed [rad^2/s^2].
+
+    The simulator does not hold a joint to the servo's speed limit (9.6 rad/s). The production walk at 0.8 mph
+    swung its hip-lift joints at up to 13.1 rad/s (research 0024). The default `limit` is 90% of the servo's.
+    """
+    speed = env.scene[asset_cfg.name].data.joint_vel.torch[:, asset_cfg.joint_ids].abs()
+    return torch.sum(torch.square(torch.clamp(speed - limit, min=0.0)), dim=1)
+
+
 # name, function, weight. The order is the ladder's.
 LADDER = [
     ("action_rate", action_rate, -0.05),
@@ -122,7 +132,9 @@ LADDER = [
 # The reward manager multiplies by the 0.02 s step, so 25 pays 0.5 for each second a swing lasts beyond 0.1 s:
 # 0.4 a second for the scripted gait (two 0.2 s swings a second per foot), nothing for the 0.1 s patter.
 # paired_steps at 15 pays 0.3 a second for the scripted gait (each foot 0.2 s down, 0.2 s up).
-EXTRA = [("step_time", step_time, 2.0), ("long_steps", long_steps, 25.0), ("paired_steps", paired_steps, 15.0)]
+# leg_speed_over at -1.0 costs production_fast_a's walk 1.6 a second at 0.36 m/s and 0.9 at 0.31 m/s, and the
+# fast-walk probes' walks nothing (research 0025): a walk inside the servo's speed is free, one outside it does not pay.
+EXTRA = [("step_time", step_time, 2.0), ("long_steps", long_steps, 25.0), ("paired_steps", paired_steps, 15.0), ("leg_speed_over", leg_speed_over, -1.0)]
 
 _resolved: set[int] = set()
 
@@ -206,6 +218,13 @@ class Ladder2BounceFidgetRewardsCfg(Ladder2BounceRewardsCfg):
 @configclass
 class Ladder2PairedRewardsCfg(Ladder2RewardsCfg):
     paired_steps = RewTerm(func=paired_steps, weight=EXTRA[2][2], params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")})
+
+
+@configclass
+class Ladder2SpeedRewardsCfg(Ladder2RewardsCfg):
+    """Rung 2 plus a price on leg joints turning faster than the servo can."""
+
+    leg_speed_over = RewTerm(func=leg_speed_over, weight=EXTRA[3][2], params={"asset_cfg": SceneEntityCfg("robot", joint_names=LEG_JOINTS, preserve_order=True)})
 
 
 @configclass
