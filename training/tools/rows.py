@@ -2,7 +2,7 @@
 """Turn a recorded run into rows for the shared record (the training_* tables), and send them.
 
     python training/tools/rows.py build <run folder> <Drive record .json> --session 2026-11-a --out rows.json [--slim]
-    python training/tools/rows.py push rows.json            # needs SUPABASE_URL and SUPABASE_SECRET_KEY
+    python training/tools/rows.py push rows.json [--new-only]   # needs SUPABASE_URL and SUPABASE_SECRET_KEY
 
 `build` reads only files and talks to nothing. A row points at other rows by name, in fields that
 start with "@": "@run" is a run's folder name, "@file" a Drive path, "@checkpoint" an iteration,
@@ -27,7 +27,13 @@ import urllib.request
 
 GPU_USD_PER_HOUR = float(os.environ.get("GPU_USD_PER_HOUR", 0.174))
 VAST_INSTANCE = int(os.environ.get("VAST_INSTANCE", 61888788))  # the instance the run trained on; set VAST_INSTANCE for a later one
-CAMERAS = {"pet": "CAM_PET", "side": "CAM_SIDE", "top": "CAM_TOP", "fixed": "CAM_FIXED"}
+# A rented GPU's clock can be wrong (instance 62662296 ran 19 hours ahead). Its run folders keep the date the GPU gave them;
+# started_at and finished_at are set back by this many seconds, and the run's notes say so.
+GPU_CLOCK_AHEAD_SECONDS = int(os.environ.get("GPU_CLOCK_AHEAD_SECONDS", 0))
+# Iterations whose older fixed-noise batch already has rows in the record: it is kept there, and the training-noise
+# batch of that checkpoint stays in Drive only, so no stored episode changes under a moment that points at it.
+SENT_FIXED_NOISE = {int(n) for n in os.environ.get("SENT_FIXED_NOISE", "").split(",") if n}
+CAMERAS = {"pet": "CAM_PET", "side": "CAM_SIDE", "top": "CAM_TOP", "fixed": "CAM_FIXED", "race": "CAM_FIXED"}
 # What an episode row keeps in `numbers` when built with --slim: what a video's caption or a filter needs.
 SLIM_NUMBERS = ("achieved", "parked_share", "largest_tilt_deg", "time_upright_seconds", "along_command_10s_m", "fall_cause",
                 "torque_peak_max_n_m", "torque_mean_max_n_m", "share_of_time_at_limit_max")
@@ -155,7 +161,9 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str, slim: 
             continue
         # A checkpoint has one 'noise' batch in the table. Where a batch with the checkpoint's own training noise
         # exists (32 seeds), it is the one stored; the older fixed-noise batch (8 seeds) stays in Drive only.
-        if batch == "noise" and f"{n}_training_noise" in evals:
+        if batch == "noise" and f"{n}_training_noise" in evals and n not in SENT_FIXED_NOISE:
+            continue
+        if batch == "training_noise" and n in SENT_FIXED_NOISE and f"{n}_noise" in evals:
             continue
         # The table knows five batches. The ball episodes (skill 5) are stored as 'extra', like the shove ladder:
         # their cells are named forward_ball_400 and so on, their moments are tagged 'ball', and setup.ball has the ball.
@@ -197,6 +205,13 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str, slim: 
                 print(f"no render row for {rel}: no episode {episode}", file=sys.stderr)
                 continue
             renders.append({"@run": run, "@checkpoint": episode[0], "@episode": [batch, cell, episode[3]], "camera": CAMERAS[found.group(4)], "kind": "preview", "@file": path_of(rel)})
+    if GPU_CLOCK_AHEAD_SECONDS:
+        import datetime
+        for field in ("started_at", "finished_at"):
+            if run_row[field]:
+                run_row[field] = (datetime.datetime.fromisoformat(run_row[field].replace("Z", "+00:00")) - datetime.timedelta(seconds=GPU_CLOCK_AHEAD_SECONDS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        run_row["notes"] = ((run_row["notes"] + ". ") if run_row["notes"] else "") + (
+            f"The GPU's clock ran {GPU_CLOCK_AHEAD_SECONDS / 3600:.1f} hours ahead: the folder name and the times inside its files carry that clock; started_at and finished_at here are corrected.")
     if unscored:
         clips = sorted(rel for rel in in_drive if rel.startswith("scorbi/previews/"))
         run_row["notes"] = ((run_row["notes"] + ". ") if run_row["notes"] else "") + (
@@ -226,10 +241,12 @@ def api(method: str, table: str, query: str = "", body=None, prefer: str = ""):
         raise SystemExit(f"{method} {table}: {err.code} {err.read().decode()[:500]}") from None
 
 
-def upsert(table: str, rows: list[dict], conflict: str, returning: str) -> list[dict]:
+def upsert(table: str, rows: list[dict], conflict: str, returning: str, keep_existing: bool = False) -> list[dict]:
+    """Insert the rows; one that is there already is overwritten, or left alone with keep_existing (then it is not returned)."""
     out = []
+    resolution = "ignore-duplicates" if keep_existing else "merge-duplicates"
     for i in range(0, len(rows), 500):
-        out += api("POST", table, f"on_conflict={conflict}&select={returning}", rows[i : i + 500], "resolution=merge-duplicates,return=representation")
+        out += api("POST", table, f"on_conflict={conflict}&select={returning}", rows[i : i + 500], f"resolution={resolution},return=representation")
     return out
 
 
@@ -244,7 +261,13 @@ def fetch_all(table: str, query: str) -> list[dict]:
         last = page[-1]["id"]
 
 
-def push(rows: dict) -> None:
+def push(rows: dict, new_only: bool = False) -> None:
+    """Send one run's rows. With new_only, iterations and episodes that are in the record already are not sent again.
+
+    Overwriting a row with itself still writes a new copy of it in Postgres, and the old copy's room is only handed
+    back to the table, not to the disk. Adding one batch to a run with 60,000 episodes would grow a small database by
+    the size of all of them. Runs, files and checkpoints are few and are always overwritten.
+    """
     plain = lambda row: {k: v for k, v in row.items() if not k.startswith("@")}  # noqa: E731
     run_row = rows["training_runs"][0]
     parent = run_row.get("@parent_run")
@@ -256,18 +279,23 @@ def push(rows: dict) -> None:
         body["parent_run_id"] = found[0]["id"]
     run_id = upsert("training_runs", [body], "name", "id")[0]["id"]
     files = {f["path"]: f["id"] for f in upsert("training_files", [plain(f) | {"run_id": run_id} for f in rows["training_files"]], "path", "id,path")}
-    upsert("training_iterations", [plain(r) | {"run_id": run_id} for r in rows["training_iterations"]], "run_id,iteration", "iteration")
+    upsert("training_iterations", [plain(r) | {"run_id": run_id} for r in rows["training_iterations"]], "run_id,iteration", "iteration", keep_existing=new_only)
     checkpoints = {c["iteration"]: c["id"] for c in upsert(
         "training_checkpoints",
         [plain(c) | {"run_id": run_id, "model_file_id": files.get(c["@model_file"]), "policy_file_id": files.get(c["@policy_file"])} for c in rows["training_checkpoints"]],
         "run_id,iteration", "id,iteration")}
-    sent = upsert("training_episodes", [plain(e) | {"checkpoint_id": checkpoints[e["@checkpoint"]], "poses_file_id": files[e["@poses_file"]]} for e in rows["training_episodes"]],
-                  "checkpoint_id,batch,cell,seed", "id,checkpoint_id,batch,cell,seed")
-    episodes = {(e["checkpoint_id"], e["batch"], e["cell"], e["seed"]): e["id"] for e in sent}
+    ids = ",".join(str(i) for i in checkpoints.values())
+    episode_key = lambda e: (e["checkpoint_id"], e["batch"], e["cell"], e["seed"])  # noqa: E731
+    to_send = [plain(e) | {"checkpoint_id": checkpoints[e["@checkpoint"]], "poses_file_id": files[e["@poses_file"]]} for e in rows["training_episodes"]]
+    episodes = {}
+    if new_only:
+        episodes = {episode_key(e): e["id"] for e in fetch_all("training_episodes", f"select=id,checkpoint_id,batch,cell,seed&checkpoint_id=in.({ids})")}
+        to_send = [e for e in to_send if episode_key(e) not in episodes]
+    sent = upsert("training_episodes", to_send, "checkpoint_id,batch,cell,seed", "id,checkpoint_id,batch,cell,seed")
+    episodes |= {episode_key(e): e["id"] for e in sent}
     episode_of = lambda row: episodes[(checkpoints[row["@checkpoint"]], *row["@episode"])]  # noqa: E731
     # Moments have no unique key in the table. One is taken as sent already when its episode has a moment of the
     # same kind over the same seconds, so sending a run again, or after a send that broke off, adds only what is missing.
-    ids = ",".join(str(i) for i in checkpoints.values())
     made = fetch_all("training_moments", f"select=id,episode_id,kind,start_seconds,end_seconds&checkpoint_id=in.({ids})")
     key = lambda m: (m["episode_id"], m["kind"], round(float(m["start_seconds"]), 3), round(float(m["end_seconds"]), 3))  # noqa: E731
     there = {key(m) for m in made}
@@ -285,7 +313,8 @@ def push(rows: dict) -> None:
         renders.append(plain(r) | {"moment_id": by_episode[episode], "file_id": files[r["@file"]]})
     if renders:
         upsert("training_renders", renders, "file_id", "id")
-    print(f"{run_row['name']}: run {run_id}, " + ", ".join(f"{len(v)} {k.removeprefix('training_')}" for k, v in rows.items() if k != "training_runs"))
+    print(f"{run_row['name']}: run {run_id}, " + ", ".join(f"{len(v)} {k.removeprefix('training_')}" for k, v in rows.items() if k != "training_runs")
+          + (f"; new: {len(sent)} episodes, {len(batch)} moments" if new_only else ""))
 
 
 if __name__ == "__main__":
@@ -299,11 +328,12 @@ if __name__ == "__main__":
     b.add_argument("--slim", action="store_true", help="keep only SLIM_NUMBERS in each episode's numbers")
     p = sub.add_parser("push")
     p.add_argument("rows")
+    p.add_argument("--new-only", action="store_true", help="leave iterations and episodes that are in the record already untouched; for adding batches to a run that was sent before")
     args = parser.parse_args()
     if args.command == "build":
         rows = build(pathlib.Path(args.run_dir).resolve(), pathlib.Path(args.record), args.session, args.slim)
         pathlib.Path(args.out).write_text(json.dumps(rows))
         print(f"{args.out}: " + ", ".join(f"{len(v)} {k.removeprefix('training_')}" for k, v in rows.items()))
     else:
-        push(json.loads(pathlib.Path(args.rows).read_text()))
+        push(json.loads(pathlib.Path(args.rows).read_text()), args.new_only)
     sys.exit(0)
