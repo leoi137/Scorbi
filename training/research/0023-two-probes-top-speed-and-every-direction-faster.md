@@ -1,6 +1,6 @@
 # 0023 · Two probes: top speed, and every direction faster
 
-26 November 2026, 11:00 UTC. Written before the runs start. Instance 62662296.
+26 November 2026, 10:50 UTC. Written before the runs start. Instance 62662296.
 
 ## Why
 
