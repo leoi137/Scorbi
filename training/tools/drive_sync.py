@@ -149,10 +149,16 @@ class _Hashed:
         return block
 
 
-def send_stream(host: str, remote: str, name: str, size: int, parent: str) -> tuple[dict, str, str]:
-    """One remote file into Drive without touching this disk. Returns (the file as Drive reports it, 'sent' or 'kept', SHA-256)."""
+def send_stream(host: str, remote: str, name: str, size: int, parent: str, before: dict | None = None) -> tuple[dict, str, str]:
+    """One remote file into Drive without touching this disk. Returns (the file as Drive reports it, 'sent' or 'kept', SHA-256).
+
+    `before` is the file's row in the last record. A file Drive still has with that row's id, size and MD5 is taken
+    as kept without asking the remote machine again: a run's files are written once.
+    """
     quoted = shlex.quote(remote)
     there = listing(parent).get(name)
+    if there and before and before.get("verified") and before.get("md5") == there.get("md5Checksum") and before.get("bytes") == size == int(there.get("size", -1)):
+        return there, "kept", before["sha256"]
     if there and int(there.get("size", -1)) == size:  # perhaps sent before: compare with the remote file's own hashes
         out = subprocess.run(["ssh", host, f"md5sum {quoted} && sha256sum {quoted}"], capture_output=True, text=True, check=True).stdout.split()
         if out[0] == there.get("md5Checksum"):
@@ -199,6 +205,7 @@ def stream(host: str, remote: str, local: pathlib.Path, drive_path: str, record:
         sizes = {rel: size for rel, size in sizes.items() if rel.split("/")[0] in only}
     on_disk = {str(p.relative_to(local)): p for p in local.rglob("*") if p.is_file() and not p.name.startswith(".")}
     base = [p for p in drive_path.strip("/").split("/") if p]
+    earlier = {f["path"]: f for f in json.loads(record.read_text())["files"]} if record.exists() else {}
     jobs = []  # (relative path, parent folder id, local file or None)
     for rel in sorted(set(sizes) | set(on_disk)):
         here = on_disk.get(rel)
@@ -221,12 +228,12 @@ def stream(host: str, remote: str, local: pathlib.Path, drive_path: str, record:
             size = sizes[rel]
             try:
                 with STREAMS:
-                    there, how, sha = send_stream(host, f"{remote.rstrip('/')}/{rel}", rel.split("/")[-1], size, parent)
+                    there, how, sha = send_stream(host, f"{remote.rstrip('/')}/{rel}", rel.split("/")[-1], size, parent, earlier.get("/".join(base + [rel])))
             except (OSError, subprocess.CalledProcessError) as e:  # one file that will not go does not stop the others; the next run sends it
                 print(e, file=sys.stderr)
                 there, how, sha = {"id": None}, "failed", None
             ok = int(there.get("size", -1)) == size  # its MD5 was compared when it was sent or kept
-        return {"path": "/".join(base + [rel]), "drive_file_id": there["id"], "bytes": size, "sha256": sha, "verified": ok, "on_this_disk": here is not None}, how
+        return {"path": "/".join(base + [rel]), "drive_file_id": there["id"], "bytes": size, "sha256": sha, "md5": there.get("md5Checksum"), "verified": ok, "on_this_disk": here is not None}, how
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=WORKERS) as pool:
         done = list(pool.map(one, jobs))
