@@ -31,6 +31,7 @@ _VARIANTS += [("Scorbi-Velocity-Flat-Remote", "production:RemoteEnvCfg")]  # Pro
 # The fast-walk probes: forward commands up to 0.40 m/s (fast.py).
 _VARIANTS += [("Scorbi-Velocity-Flat-Fast", "fast:FastEnvCfg"), ("Scorbi-Velocity-Flat-Fast-Narrow", "fast:FastNarrowEnvCfg")]
 _VARIANTS += [("Scorbi-Velocity-Flat-TopSpeed", "fast:TopSpeedEnvCfg"), ("Scorbi-Velocity-Flat-AllFast", "fast:AllFastEnvCfg")]  # past 0.8 mph; every direction faster
+_VARIANTS += [("Scorbi-Velocity-Flat-Remote-Probe", "fast:RemoteProbeEnvCfg")]  # AllFast with slow commands kept common and a price on leg speed
 for _id, _cfg in _VARIANTS:
     gym.register(
         id=_id,

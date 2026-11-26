@@ -2,6 +2,12 @@
 """Copy folders to Google Drive and verify every file.
 
     python training/tools/drive_sync.py push [--record files.json] <local folder> <Drive path> [<local> <Drive path> ...]
+    python training/tools/drive_sync.py stream [--record files.json] [--only scorbi,params] <ssh host> <remote folder> <local folder> <Drive path>
+
+`stream` is for a machine with a small disk between a rented GPU and Drive. Every file under the remote
+folder that is not in the local folder at its full size goes from the GPU straight into Drive, through this
+machine's memory and never onto its disk. Files in the local folder are sent as `push` sends them. Copy the
+small files a later step reads (JSON, logs) to the local folder first; the big ones need not be there.
 
 The Drive path is below the root folder named by SCORBI_DRIVE_ROOT (default "Autonomous-Robotics").
 Reads GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET and GDRIVE_TOKEN from the environment and prints none
@@ -16,7 +22,10 @@ import hashlib
 import json
 import os
 import pathlib
+import shlex
+import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -28,6 +37,9 @@ FOLDER = "application/vnd.google-apps.folder"
 AUTH: dict[str, str] = {}
 # Files sent at once. One upload from the orb runs at about 1 MB/s whatever the line could carry.
 WORKERS = int(os.environ.get("DRIVE_WORKERS", 8))
+# Files streamed at once from another machine. The line from the GPU carries about 4.5 MB/s in all, and Drive
+# resets an upload that trickles, so few streams at a time.
+STREAMS = threading.Semaphore(int(os.environ.get("DRIVE_STREAMS", 3)))
 
 
 def call(method: str, url: str, data: bytes | None = None, headers: dict | None = None):
@@ -123,6 +135,112 @@ def send(path: pathlib.Path, parent: str) -> tuple[dict, str]:
     return now, "sent"
 
 
+class _Hashed:
+    """A file-like reader that hashes what passes through it."""
+
+    def __init__(self, raw):
+        self.raw, self.md5, self.sha, self.count = raw, hashlib.md5(), hashlib.sha256(), 0
+
+    def read(self, n: int = -1) -> bytes:
+        block = self.raw.read(1 << 20 if n is None or n < 0 else n)
+        self.md5.update(block)
+        self.sha.update(block)
+        self.count += len(block)
+        return block
+
+
+def send_stream(host: str, remote: str, name: str, size: int, parent: str) -> tuple[dict, str, str]:
+    """One remote file into Drive without touching this disk. Returns (the file as Drive reports it, 'sent' or 'kept', SHA-256)."""
+    quoted = shlex.quote(remote)
+    there = listing(parent).get(name)
+    if there and int(there.get("size", -1)) == size:  # perhaps sent before: compare with the remote file's own hashes
+        out = subprocess.run(["ssh", host, f"md5sum {quoted} && sha256sum {quoted}"], capture_output=True, text=True, check=True).stdout.split()
+        if out[0] == there.get("md5Checksum"):
+            return there, "kept", out[2]
+    head = {"Content-Type": "application/json", "X-Upload-Content-Length": str(size)}
+    for attempt in range(6):
+        if there:
+            _, h = call("PATCH", f"{UPLOAD}/files/{there['id']}?uploadType=resumable", b"{}", head)
+        else:
+            _, h = call("POST", f"{UPLOAD}/files?uploadType=resumable", json.dumps({"name": name, "parents": [parent]}).encode(), head)
+        source = subprocess.Popen(["ssh", host, f"cat {quoted}"], stdout=subprocess.PIPE)
+        body = _Hashed(source.stdout)
+        try:
+            req = urllib.request.Request(h["Location"], data=body if size else b"", method="PUT", headers={**AUTH, "Content-Length": str(size)})
+            with urllib.request.urlopen(req, timeout=1800) as r:
+                made = json.loads(r.read())
+            if source.wait() != 0 or body.count != size:
+                raise OSError(f"read {body.count} of {size} bytes of {remote}")
+            now, _ = call("GET", f"{API}/files/{made['id']}?fields=id,name,mimeType,md5Checksum,size")
+            if size and now.get("md5Checksum") != body.md5.hexdigest():
+                raise OSError(f"Drive's MD5 of {name} is not the MD5 of what was sent")
+            listing(parent)[name] = now
+            return now, "sent", body.sha.hexdigest() if size else hashlib.sha256(b"").hexdigest()
+        except (urllib.error.URLError, OSError) as e:  # an upload that broke off cannot be resumed from a pipe: start it again
+            source.kill()
+            source.wait()
+            if isinstance(e, urllib.error.HTTPError) and e.code == 401:
+                sign_in()
+            if attempt == 5:
+                raise OSError(f"could not stream {remote}: {e}") from None
+            time.sleep(5 * 2**attempt)
+            there = listing(parent).get(name) or children(parent).get(name)
+
+
+def stream(host: str, remote: str, local: pathlib.Path, drive_path: str, record: pathlib.Path, only: tuple[str, ...] = ()) -> int:
+    sign_in()
+    root_name = os.environ.get("SCORBI_DRIVE_ROOT", "Autonomous-Robotics")
+    root = listing("root").get(root_name)
+    if not root or root["mimeType"] != FOLDER:
+        raise SystemExit(f"no folder named {root_name} at the top of the Drive")
+    found = subprocess.run(["ssh", host, f"cd {shlex.quote(remote)} && find . -type f -printf '%s\\t%P\\n'"], capture_output=True, text=True, check=True).stdout
+    sizes = {rel: int(size) for size, rel in (line.split("\t", 1) for line in found.splitlines())}
+    if only:  # the remote folder's other files (a library's own checkpoints, event files) are left where they are
+        sizes = {rel: size for rel, size in sizes.items() if rel.split("/")[0] in only}
+    on_disk = {str(p.relative_to(local)): p for p in local.rglob("*") if p.is_file() and not p.name.startswith(".")}
+    base = [p for p in drive_path.strip("/").split("/") if p]
+    jobs = []  # (relative path, parent folder id, local file or None)
+    for rel in sorted(set(sizes) | set(on_disk)):
+        here = on_disk.get(rel)
+        if here is not None and rel in sizes and here.stat().st_size != sizes[rel]:
+            here = None  # a copy that broke off: the remote file is the whole one
+        parent = root["id"]
+        for part in base + rel.split("/")[:-1]:
+            parent = folder(parent, part)
+        listing(parent)
+        jobs.append((rel, parent, here))
+
+    def one(job):
+        rel, parent, here = job
+        if here is not None:
+            there, how = send(here, parent)
+            md5, sha = digests(here)
+            size = here.stat().st_size
+            ok = there.get("md5Checksum") == md5 and int(there.get("size", -1)) == size
+        else:
+            size = sizes[rel]
+            try:
+                with STREAMS:
+                    there, how, sha = send_stream(host, f"{remote.rstrip('/')}/{rel}", rel.split("/")[-1], size, parent)
+            except (OSError, subprocess.CalledProcessError) as e:  # one file that will not go does not stop the others; the next run sends it
+                print(e, file=sys.stderr)
+                there, how, sha = {"id": None}, "failed", None
+            ok = int(there.get("size", -1)) == size  # its MD5 was compared when it was sent or kept
+        return {"path": "/".join(base + [rel]), "drive_file_id": there["id"], "bytes": size, "sha256": sha, "verified": ok, "on_this_disk": here is not None}, how
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        done = list(pool.map(one, jobs))
+    rows = [row for row, _ in done]
+    bad = [row["path"] for row in rows if not row["verified"]]
+    for path in bad:
+        print("MISMATCH", path)
+    record.write_text(json.dumps({"drive_root": root_name, "checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "files": rows}, indent=1))
+    streamed = sum(not row["on_this_disk"] for row in rows)
+    print(f"{len(rows)} files, {sum(r['bytes'] for r in rows) / 1e6:.1f} MB: {sum(how == 'sent' for _, how in done)} sent, {sum(how == 'kept' for _, how in done)} already there, "
+          f"{len(bad)} mismatched; {streamed} of them only on {host} and in Drive. Record: {record}")
+    return 1 if bad else 0
+
+
 def push(pairs: list[tuple[pathlib.Path, str]], record: pathlib.Path) -> int:
     sign_in()
     root_name = os.environ.get("SCORBI_DRIVE_ROOT", "Autonomous-Robotics")
@@ -165,12 +283,19 @@ def push(pairs: list[tuple[pathlib.Path, str]], record: pathlib.Path) -> int:
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
-    if not argv or argv[0] != "push":
+    if not argv or argv[0] not in ("push", "stream"):
         raise SystemExit(__doc__)
-    argv = argv[1:]
+    command, argv = argv[0], argv[1:]
     record = pathlib.Path("drive_files.json")
     if argv[:1] == ["--record"]:
         record, argv = pathlib.Path(argv[1]), argv[2:]
+    if command == "stream":
+        only: tuple[str, ...] = ()
+        if argv[:1] == ["--only"]:
+            only, argv = tuple(argv[1].split(",")), argv[2:]
+        if len(argv) != 4:
+            raise SystemExit(__doc__)
+        raise SystemExit(stream(argv[0], argv[1], pathlib.Path(argv[2]), argv[3], record, only))
     if not argv or len(argv) % 2:
         raise SystemExit(__doc__)
     raise SystemExit(push([(pathlib.Path(argv[i]), argv[i + 1]) for i in range(0, len(argv), 2)], record))

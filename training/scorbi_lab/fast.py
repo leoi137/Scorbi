@@ -13,7 +13,7 @@ The width of the tracking reward is the open choice. The plan's rule (half the t
 from isaaclab.utils import configclass
 
 from .env_cfg import ScorbiFlatEnvCfg
-from .ladder import Ladder2RewardsCfg
+from .ladder import Ladder2RewardsCfg, Ladder2SpeedRewardsCfg
 
 FAST_FORWARD = (-0.12, 0.40)
 """Forward command range [m/s]. Backward, sideways and turning are unchanged."""
@@ -60,3 +60,18 @@ class AllFastEnvCfg(FastNarrowEnvCfg):
         self.commands.base_velocity.ranges.lin_vel_x = (-0.40, 0.40)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.30, 0.30)
         self.commands.base_velocity.ranges.ang_vel_z = (-2.5, 2.5)
+
+
+@configclass
+class RemoteProbeEnvCfg(AllFastEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Remote-Probe``: ``AllFast`` with slow commands kept common and a price on leg speed (research 0026).
+
+    Two changes against ``all_fast_s1``, because the long run needs both and the day has room for one probe:
+    40% of the robots draw from ranges 0.3 times as wide, and the reward gains ``leg_speed_over``.
+    """
+
+    rewards: Ladder2SpeedRewardsCfg = Ladder2SpeedRewardsCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.commands.base_velocity.rel_slow_envs = 0.4

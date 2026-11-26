@@ -259,3 +259,4 @@ class RemoteEnvCfg(ProductionFastLimitEnvCfg):
         self.commands.base_velocity.ranges.lin_vel_x = (-0.40, 0.40)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.30, 0.30)
         self.commands.base_velocity.ranges.ang_vel_z = (-2.5, 2.5)
+        self.commands.base_velocity.rel_slow_envs = 0.4  # as the probe: slow commands stay common

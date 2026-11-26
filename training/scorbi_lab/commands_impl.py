@@ -22,12 +22,19 @@ class ScorbiVelocityCommand(UniformVelocityCommand):
             raise ValueError(f"min_speed {cfg.min_speed} is outside the linear ranges {r.lin_vel_x}, {r.lin_vel_y}")
         if not 0.0 <= cfg.min_turn < min(-r.ang_vel_z[0], r.ang_vel_z[1]):
             raise ValueError(f"min_turn {cfg.min_turn} is outside the turn range {r.ang_vel_z}")
+        if cfg.rel_slow_envs and cfg.slow_scale * min(-r.ang_vel_z[0], r.ang_vel_z[1]) <= cfg.min_turn:
+            raise ValueError(f"slow_scale {cfg.slow_scale} leaves no turn range above min_turn {cfg.min_turn}")
         super().__init__(cfg, env)
 
     def _resample_command(self, env_ids: Sequence[int]) -> None:
         super()._resample_command(env_ids)
         cmd = self.vel_command_b[env_ids]
         n = cmd.shape[0]
+        # slow: some robots draw from narrower ranges, so slow commands stay common when the ranges are wide
+        scale = torch.ones(n, device=self.device)
+        if self.cfg.rel_slow_envs:  # no draw when it is off: the older tasks keep their random numbers
+            scale = torch.where(torch.rand(n, device=self.device) < self.cfg.rel_slow_envs, self.cfg.slow_scale, 1.0)
+            cmd = cmd * scale[:, None]
         # drive: the planar speed is never between zero and the floor
         speed = torch.linalg.norm(cmd[:, :2], dim=1, keepdim=True)
         forward = torch.tensor([1.0, 0.0], device=self.device).expand(n, 2)
@@ -38,7 +45,7 @@ class ScorbiVelocityCommand(UniformVelocityCommand):
         # spin: no linear speed, a real turn rate, either way
         spin = torch.rand(n, device=self.device) < self.cfg.rel_spin_envs
         top = torch.where(torch.rand(n, device=self.device) < 0.5, self.cfg.ranges.ang_vel_z[0], self.cfg.ranges.ang_vel_z[1])
-        size = self.cfg.min_turn + torch.rand(n, device=self.device) * (top.abs() - self.cfg.min_turn)
+        size = self.cfg.min_turn + torch.rand(n, device=self.device) * (top.abs() * scale - self.cfg.min_turn)
         linear = torch.where(spin[:, None], torch.zeros_like(linear), linear)
         turn = torch.where(spin, torch.sign(top) * size, turn)
         self.vel_command_b[env_ids, :2] = linear

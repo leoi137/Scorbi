@@ -30,3 +30,13 @@ class ScorbiVelocityCommandCfg(UniformVelocityCommandCfg):
 
     rel_spin_envs: float = 0.15
     """Share of the robots that are not standing which are told to turn on the spot."""
+
+    rel_slow_envs: float = 0.0
+    """Share of the robots whose whole command is drawn from ranges `slow_scale` times as wide.
+
+    With wide ranges few commands are slow, and a policy can park at them for half the tracking pay: `all_fast_s1`
+    stood still on two of three episodes told 0.06 m/s (research 0026). Zero leaves the sampling as it was.
+    """
+
+    slow_scale: float = 0.3
+    """How wide the slow robots' ranges are, as a share of `ranges`."""
