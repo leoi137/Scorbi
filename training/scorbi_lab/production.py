@@ -244,3 +244,18 @@ class ProductionFastLimitEnvCfg(ProductionFastEnvCfg):
     """
 
     rewards: Ladder2SpeedRewardsCfg = Ladder2SpeedRewardsCfg()
+
+
+@configclass
+class RemoteEnvCfg(ProductionFastLimitEnvCfg):
+    """Task ``Scorbi-Velocity-Flat-Remote``: every direction faster, for a remote control (research 0026).
+
+    The one change against ``Production-Fast-Limit`` is the command ranges, those of the probe ``all_fast_s1``:
+    forward and backward to 0.40 m/s (0.9 mph), sideways to 0.30 m/s (0.67 mph), turning to 2.5 rad/s.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.40, 0.40)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.30, 0.30)
+        self.commands.base_velocity.ranges.ang_vel_z = (-2.5, 2.5)

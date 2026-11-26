@@ -11,6 +11,7 @@ A file already in Drive with the same MD5 is left alone, so a rerun only sends w
 each upload the size and MD5 Drive reports are compared with the local file. The record file lists
 every file with its Drive id, size and SHA-256. Exits 1 if any file does not match.
 """
+import concurrent.futures
 import hashlib
 import json
 import os
@@ -25,6 +26,8 @@ API = "https://www.googleapis.com/drive/v3"
 UPLOAD = "https://www.googleapis.com/upload/drive/v3"
 FOLDER = "application/vnd.google-apps.folder"
 AUTH: dict[str, str] = {}
+# Files sent at once. One upload from the orb runs at about 1 MB/s whatever the line could carry.
+WORKERS = int(os.environ.get("DRIVE_WORKERS", 8))
 
 
 def call(method: str, url: str, data: bytes | None = None, headers: dict | None = None):
@@ -36,6 +39,9 @@ def call(method: str, url: str, data: bytes | None = None, headers: dict | None 
                 body = r.read()
                 return (json.loads(body) if body else {}), r.headers
         except urllib.error.HTTPError as e:
+            if e.code == 401 and attempt < 5 and "oauth2.googleapis.com" not in url:  # the access token lasts an hour; a long push outlives it
+                sign_in()
+                continue
             if e.code in (403, 429, 500, 502, 503, 504) and attempt < 5:
                 time.sleep(2**attempt)
                 continue
@@ -123,7 +129,8 @@ def push(pairs: list[tuple[pathlib.Path, str]], record: pathlib.Path) -> int:
     root = listing("root").get(root_name)
     if not root or root["mimeType"] != FOLDER:
         raise SystemExit(f"no folder named {root_name} at the top of the Drive")
-    rows, bad, sent = [], 0, 0
+    # Folders are made and listed one at a time, before anything is sent: two uploads making the same folder would make it twice.
+    jobs = []
     for local, remote in pairs:
         files = sorted(p for p in local.rglob("*") if p.is_file())
         for path in files:
@@ -131,14 +138,25 @@ def push(pairs: list[tuple[pathlib.Path, str]], record: pathlib.Path) -> int:
             parent = root["id"]
             for part in parts:
                 parent = folder(parent, part)
-            there, how = send(path, parent)
-            md5, sha = digests(path)
-            ok = there.get("md5Checksum") == md5 and int(there.get("size", -1)) == path.stat().st_size
-            bad += not ok
-            sent += how == "sent"
-            rows.append({"path": "/".join(parts + [path.name]), "drive_file_id": there["id"], "bytes": path.stat().st_size, "sha256": sha, "verified": ok})
-            if not ok:
-                print("MISMATCH", rows[-1]["path"])
+            listing(parent)
+            jobs.append((path, parent, parts))
+
+    def one(job):
+        path, parent, parts = job
+        there, how = send(path, parent)
+        md5, sha = digests(path)
+        ok = there.get("md5Checksum") == md5 and int(there.get("size", -1)) == path.stat().st_size
+        return {"path": "/".join(parts + [path.name]), "drive_file_id": there["id"], "bytes": path.stat().st_size, "sha256": sha, "verified": ok}, how
+
+    # The files go several at once; the record keeps their sorted order.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        done = list(pool.map(one, jobs))
+    rows = [row for row, _ in done]
+    sent = sum(how == "sent" for _, how in done)
+    bad = sum(not row["verified"] for row in rows)
+    for row in rows:
+        if not row["verified"]:
+            print("MISMATCH", row["path"])
     record.write_text(json.dumps({"drive_root": root_name, "checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "files": rows}, indent=1))
     total = sum(r["bytes"] for r in rows)
     print(f"{len(rows)} files, {total / 1e6:.1f} MB: {sent} sent, {len(rows) - sent} already there, {bad} mismatched. Record: {record}")
