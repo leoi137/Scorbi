@@ -9,11 +9,18 @@ start with "@": "@run" is a run's folder name, "@file" a Drive path, "@checkpoin
 "@episode" [batch, cell, seed]. `push` looks the ids up and upserts, so sending a run twice changes
 nothing. Run it in the orb, never on a rented GPU. Only files that are in Drive and verified get rows.
 
-`--slim` is for a database with little room. An episode keeps only the SLIM_NUMBERS in `numbers`, and an
-episode of the fixed-seed batch that is not a picked moment keeps none: with 32 seeds of 13 commands at every
-checkpoint those are nine rows in ten. The description of the ball goes once into the run's manifest
-(`recorded.ball`) instead of into every ball episode. Everything left out is in that checkpoint's episodes.json
-in Drive, beside its poses file, and sending the full rows later fills it in.
+The record is an index, and the bulk stays in Drive. A row for every episode of every checkpoint filled a
+500 MB database in 16 runs, so `build` writes:
+  - training_cell_stats: for each checkpoint, batch and cell, how many episodes there were and how they went;
+  - training_episodes: only the episodes a moment or a clip points at, and one example (the lowest seed) of
+    each outcome of each cell, so a query for a checkpoint's cells or fail labels still finds them;
+  - training_iterations: every ITERATION_STEP-th iteration, and the iteration of each checkpoint.
+Every episode is in that checkpoint's episodes.json in Drive, beside its poses file, and every iteration in the
+run's iterations.jsonl.
+
+`--slim` makes the episode rows smaller still: an episode keeps only the SLIM_NUMBERS in `numbers`, and one of the
+fixed-seed batch that is not a picked moment keeps none. The description of the ball goes once into the run's
+manifest (`recorded.ball`) instead of into every ball episode.
 """
 import argparse
 import json
@@ -37,6 +44,8 @@ CAMERAS = {"pet": "CAM_PET", "side": "CAM_SIDE", "top": "CAM_TOP", "fixed": "CAM
 # What an episode row keeps in `numbers` when built with --slim: what a video's caption or a filter needs.
 SLIM_NUMBERS = ("achieved", "parked_share", "largest_tilt_deg", "time_upright_seconds", "along_command_10s_m", "fall_cause",
                 "torque_peak_max_n_m", "torque_mean_max_n_m", "share_of_time_at_limit_max")
+# Which rows of the training log get a row in training_iterations, besides each checkpoint's own iteration.
+ITERATION_STEP = 50
 EPISODE_COLUMNS = ("cell", "seed", "duration_seconds", "success", "reward", "fell_at_seconds", "fail_label", "funny_score", "motor_mark", "pushes")
 
 
@@ -140,6 +149,7 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str, slim: 
                            "wall_seconds_total": r["wall_seconds_total"], "falls_total": r["falls_total"], "extras": extras})
 
     checkpoints, episodes, moments = [], [], []
+    stats = {}  # (iteration, batch, cell) -> its training_cell_stats row, counted over every episode
     for c in json.loads((scorbi / "checkpoints.json").read_text()):
         n = c["iteration"]
         e = evals.get(str(n))
@@ -174,6 +184,17 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str, slim: 
         if slim and m.get("ball"):
             run_row["manifest"]["recorded"]["ball"] = m["ball"]
         for ep in e["episodes"]:
+            cell = stats.setdefault((n, batch, ep["cell"]), {
+                "@run": run, "@checkpoint": n, "batch": batch, "cell": ep["cell"], "skill": ep.get("skill"), "episodes": 0, "passed": 0, "fell": 0,
+                "reward": 0.0, "fail_counts": {}, "motor_green": 0, "motor_amber": 0, "motor_red": 0})
+            cell["episodes"] += 1
+            cell["passed"] += bool(ep["success"])
+            cell["fell"] += ep["fell_at_seconds"] is not None
+            cell["reward"] += ep["reward"]  # a sum here, the mean once every episode is counted
+            if ep["fail_label"]:
+                cell["fail_counts"][ep["fail_label"]] = cell["fail_counts"].get(ep["fail_label"], 0) + 1
+            if ep["motor_mark"]:
+                cell[f"motor_{ep['motor_mark']}"] += 1
             row = {k: lean(ep[k]) for k in EPISODE_COLUMNS}
             row |= {"@run": run, "@checkpoint": n, "batch": batch, "@poses_file": poses, "poses_index": ep["index"], "terrain_type": "flat", "terrain_level": None,
                     "numbers": lean({k: v for k, v in ep.items() if k not in EPISODE_COLUMNS and k not in ("index", "command", "skill", "torque_peak_n_m", "torque_mean_n_m")}
@@ -205,6 +226,19 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str, slim: 
                 print(f"no render row for {rel}: no episode {episode}", file=sys.stderr)
                 continue
             renders.append({"@run": run, "@checkpoint": episode[0], "@episode": [batch, cell, episode[3]], "camera": CAMERAS[found.group(4)], "kind": "preview", "@file": path_of(rel)})
+    for cell in stats.values():
+        cell["reward"] = lean(cell["reward"] / cell["episodes"])
+    # Only the episodes something points at get a row, and one example of each outcome of each cell.
+    episode_key = lambda e: (e["@checkpoint"], e["batch"], e["cell"], e["seed"])  # noqa: E731
+    wanted = {(m["@checkpoint"], *m["@episode"]) for m in moments + renders}
+    examples = {}
+    for e in episodes:
+        outcome = (e["@checkpoint"], e["batch"], e["cell"], e["fail_label"])
+        if outcome not in examples or e["seed"] < examples[outcome][3]:
+            examples[outcome] = episode_key(e)
+    wanted |= set(examples.values())
+    episodes = [e for e in episodes if episode_key(e) in wanted]
+    iterations = [r for r in iterations if r["iteration"] % ITERATION_STEP == 0 or r["iteration"] in saved]
     if GPU_CLOCK_AHEAD_SECONDS:
         import datetime
         for field in ("started_at", "finished_at"):
@@ -219,7 +253,7 @@ def build(run_dir: pathlib.Path, record_path: pathlib.Path, session: str, slim: 
             f"They are in episodes.json and poses.npz (50 Hz) under scorbi/eval/{{{', '.join(unscored)}}}/ of this run's Drive folder."
             + (f" Clips: {', '.join(clips)}." if clips else ""))
     return {"training_runs": [run_row], "training_files": files, "training_iterations": iterations, "training_checkpoints": checkpoints,
-            "training_episodes": episodes, "training_moments": moments, "training_renders": renders}
+            "training_cell_stats": list(stats.values()), "training_episodes": episodes, "training_moments": moments, "training_renders": renders}
 
 
 # ── sending ──────────────────────────────────────────────────────────────
@@ -284,6 +318,7 @@ def push(rows: dict, new_only: bool = False) -> None:
         "training_checkpoints",
         [plain(c) | {"run_id": run_id, "model_file_id": files.get(c["@model_file"]), "policy_file_id": files.get(c["@policy_file"])} for c in rows["training_checkpoints"]],
         "run_id,iteration", "id,iteration")}
+    upsert("training_cell_stats", [plain(s) | {"checkpoint_id": checkpoints[s["@checkpoint"]]} for s in rows["training_cell_stats"]], "checkpoint_id,batch,cell", "checkpoint_id")
     ids = ",".join(str(i) for i in checkpoints.values())
     episode_key = lambda e: (e["checkpoint_id"], e["batch"], e["cell"], e["seed"])  # noqa: E731
     to_send = [plain(e) | {"checkpoint_id": checkpoints[e["@checkpoint"]], "poses_file_id": files[e["@poses_file"]]} for e in rows["training_episodes"]]
