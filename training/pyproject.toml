@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scorbi-lab"
+version = "0.1.0"
+description = "Isaac Lab training tasks for Scorbi"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+
+# Isaac Lab imports every module in this group before it looks up a task name.
+[project.entry-points."isaaclab.tasks"]
+scorbi = "scorbi_lab"
+
+[tool.setuptools.packages.find]
+include = ["scorbi_lab*"]
